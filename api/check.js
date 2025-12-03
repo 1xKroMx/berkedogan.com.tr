@@ -13,10 +13,6 @@ export default function handler(req, res) {
     return res.status(405).json({ success: false });
   }
 
-  // TEST
-  console.log("req.body:", req.body);
-  console.log("password:", req.body?.password);
-
   const { password } = req.body;
   const storedHash = process.env.VERCEL_PASSWORD_HASH;
 
