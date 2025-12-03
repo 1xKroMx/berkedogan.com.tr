@@ -1,6 +1,6 @@
-import * as bcrypt from "bcryptjs";
+import bcrypt from "bcryptjs";
 
-export default async function handler(req, res) {
+export default function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://www.berkedogan.com.tr");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -14,15 +14,13 @@ export default async function handler(req, res) {
   }
 
   const { password } = req.body;
-
   const storedHash = process.env.VERCEL_PASSWORD_HASH;
 
   if (!storedHash) {
-    console.error("Hash env variable missing!");
-    return res.status(500).json({ success: false, error: "Server config error" });
+    return res.status(500).json({ success: false, error: "Missing hash" });
   }
 
-  const ok = await bcrypt.compare(password, storedHash);
+  const ok = bcrypt.compareSync(password, storedHash);
 
   if (!ok) return res.status(401).json({ success: false });
 

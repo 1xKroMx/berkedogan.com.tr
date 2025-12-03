@@ -10,9 +10,11 @@
     "test:unit": "vitest",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
-    "lint": "eslint . --fix"
+    "lint": "eslint . --fix",
+    "bcryptjs": "2.4.3"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0"
   },
