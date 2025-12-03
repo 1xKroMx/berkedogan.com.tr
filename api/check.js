@@ -18,26 +18,42 @@ export default function handler(req, res) {
 
   const { password } = req.body;
   const storedHash = process.env.VERCEL_PASSWORD_HASH;
+  const jwtSecret = process.env.JWT_SECRET;
+  const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
 
   if (!storedHash) {
     return res.status(500).json({ success: false, error: "Missing hash" });
+  }
+
+  if (typeof password !== "string" || password.length === 0) {
+    return res.status(400).json({ success: false, error: "Missing password" });
   }
 
   const ok = bcrypt.compareSync(password, storedHash);
 
   if (!ok) return res.status(401).json({ success: false });
 
-  const accessToken = jwt.sign(
-    { authorized: true },
-    process.env.JWT_SECRET,
-    { expiresIn: '15m' }
-  );
+  if (!jwtSecret || !jwtRefreshSecret) {
+    return res.status(500).json({ success: false, error: "Missing JWT secrets" });
+  }
 
-  const refreshToken = jwt.sign(
-    { authorized: true },
-    process.env.JWT_REFRESH_SECRET,
-    { expiresIn: '7d' }
-  );
+  let accessToken;
+  let refreshToken;
+  try {
+    accessToken = jwt.sign(
+      { authorized: true },
+      jwtSecret,
+      { expiresIn: '15m' }
+    );
+
+    refreshToken = jwt.sign(
+      { authorized: true },
+      jwtRefreshSecret,
+      { expiresIn: '7d' }
+    );
+  } catch (err) {
+    return res.status(500).json({ success: false, error: "Token generation failed" });
+  }
 
   res.setHeader('Set-Cookie', [
     serialize('accessToken', accessToken, {
