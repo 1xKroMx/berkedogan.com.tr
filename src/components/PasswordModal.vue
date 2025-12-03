@@ -11,10 +11,11 @@ const authMode = ref(false)
 async function handlePasswordSubmit() {
   try {
     const res = await fetch("https://www.berkedogan.com.tr/api/check", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ password: password.value })
-});
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ password: password.value })
+    });
 
 
     if (!res.ok) {
@@ -22,7 +23,6 @@ async function handlePasswordSubmit() {
       return
     }
 
-    sessionStorage.setItem('auth', 'true')
     authMode.value = false
 
     router.push("/tasks")
