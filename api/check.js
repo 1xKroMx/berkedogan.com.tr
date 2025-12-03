@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 export default function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://www.berkedogan.com.tr");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "*");
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();
@@ -12,6 +12,10 @@ export default function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ success: false });
   }
+
+  // TEST
+  console.log("req.body:", req.body);
+  console.log("password:", req.body?.password);
 
   const { password } = req.body;
   const storedHash = process.env.VERCEL_PASSWORD_HASH;
