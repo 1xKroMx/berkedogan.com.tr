@@ -3,6 +3,7 @@ import HomeView from '../views/HomeView.vue'
 import AboutView from '@/views/AboutView.vue'
 import ContactView from '@/views/ContactView.vue'
 import TasksView from '@/views/TasksView.vue'
+import { checkAuth } from '@/utils/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -44,10 +45,25 @@ const router = createRouter({
       meta: {
         title: 'Tasks — Berke Doğan',
         description:
-          'My private task management app built with Vue 3 and TypeScript.'
+          'My private task management app built with Vue 3 and TypeScript.',
+        requiresAuth: true
       }
     }
   ],
+})
+
+// Navigation guard for protected routes
+router.beforeEach(async (to, from, next) => {
+  if (to.meta.requiresAuth) {
+    const isAuthenticated = await checkAuth();
+    if (!isAuthenticated) {
+      next('/');
+    } else {
+      next();
+    }
+  } else {
+    next();
+  }
 })
 
 export default router
