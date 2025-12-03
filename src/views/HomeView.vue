@@ -82,7 +82,7 @@ const technologies = ref([
           <h1 class="hero-title">
             Hi, I'm <span class="highlight">Berke Doğan</span>
           </h1>
-          <h2 class="hero-subtitle">Full-Stack Web Developer</h2>
+          <h2 class="hero-subtitle">Frontend Web Developer</h2>
           <p class="hero-description">
             I create interactive and dynamic web applications with modern technologies. 
             Passionate about building user-friendly interfaces and scalable solutions.
