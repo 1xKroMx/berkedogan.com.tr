@@ -56,6 +56,15 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   console.log(`[Router] Navigating from "${from.path}" to "${to.path}"`);
   
+  // Handle 404.html redirect
+  const redirectPath = sessionStorage.getItem('redirectPath');
+  if (redirectPath && to.path === '/') {
+    sessionStorage.removeItem('redirectPath');
+    console.log(`[Router] Redirecting from 404 to: ${redirectPath}`);
+    next(redirectPath);
+    return;
+  }
+  
   if (to.meta.requiresAuth) {
     console.log(`[Router] Route requires auth, checking...`);
     const isAuthenticated = await checkAuth();
