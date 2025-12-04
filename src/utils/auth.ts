@@ -4,9 +4,21 @@ export async function checkAuth(): Promise<boolean> {
     const res = await fetch("https://www.berkedogan.com.tr/api/refresh", {
       method: "POST",
       credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
     });
-    return res.ok;
-  } catch {
+    
+    if (res.ok) {
+      console.log("✓ Token refreshed successfully");
+      return true;
+    } else {
+      const data = await res.json().catch(() => ({}));
+      console.log("✗ Token refresh failed:", data.error || res.status);
+      return false;
+    }
+  } catch (err) {
+    console.error("✗ Token refresh error:", err);
     return false;
   }
 }

@@ -34,7 +34,7 @@ export default function handler(req, res) {
     res.setHeader('Set-Cookie', serialize('accessToken', newAccessToken, {
       httpOnly: true,
       secure: true,
-      sameSite: 'strict',
+      sameSite: 'lax',
       maxAge: 15 * 60,
       path: '/'
     }));
