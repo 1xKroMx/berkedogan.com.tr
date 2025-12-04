@@ -17,14 +17,12 @@ async function handlePasswordSubmit() {
       body: JSON.stringify({ password: password.value })
     });
 
-
     if (!res.ok) {
       error.value = "Yanlış şifre"
       return
     }
 
     authMode.value = false
-
     router.push("/tasks")
 
   } catch (e) {

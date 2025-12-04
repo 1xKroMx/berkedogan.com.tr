@@ -3,7 +3,6 @@ import HomeView from '../views/HomeView.vue'
 import AboutView from '@/views/AboutView.vue'
 import ContactView from '@/views/ContactView.vue'
 import TasksView from '@/views/TasksView.vue'
-import { checkAuth } from '@/utils/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -54,30 +53,27 @@ const router = createRouter({
 
 // Navigation guard for protected routes
 router.beforeEach(async (to, from, next) => {
-  console.log(`[Router] Navigating from "${from.path}" to "${to.path}"`);
-  
-  // Handle 404.html redirect
-  const redirectPath = sessionStorage.getItem('redirectPath');
-  if (redirectPath && to.path === '/') {
-    sessionStorage.removeItem('redirectPath');
-    console.log(`[Router] Redirecting from 404 to: ${redirectPath}`);
-    next(redirectPath);
-    return;
-  }
-  
   if (to.meta.requiresAuth) {
-    console.log(`[Router] Route requires auth, checking...`);
-    const isAuthenticated = await checkAuth();
-    
-    if (!isAuthenticated) {
-      console.log(`[Router] Not authenticated, redirecting to home`);
+    console.log(`[Router] Navigating to protected route: ${to.path}`);
+    try {
+      // Silent session check via /api/refresh endpoint
+      const refreshRes = await fetch("https://www.berkedogan.com.tr/api/refresh", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (refreshRes.ok) {
+        console.log(`[Router] Session valid, proceeding to ${to.path}`);
+        next();
+      } else {
+        console.log(`[Router] Session invalid, redirecting to home`);
+        next('/');
+      }
+    } catch (err) {
+      console.error(`[Router] Session check failed:`, err);
       next('/');
-    } else {
-      console.log(`[Router] Authenticated, proceeding`);
-      next();
     }
   } else {
-    console.log(`[Router] Public route, proceeding`);
     next();
   }
 })

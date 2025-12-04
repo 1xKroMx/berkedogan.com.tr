@@ -1,6 +1,37 @@
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { serialize } from "cookie";
+import { randomUUID } from "crypto";
+
+// In-memory session store (max 1000 concurrent sessions)
+const sessions = new Map();
+const MAX_SESSIONS = 1000;
+const SESSION_EXPIRY_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
+
+function createSession() {
+  // Clean expired sessions
+  const now = Date.now();
+  for (const [id, session] of sessions.entries()) {
+    if (session.expiresAt < now) {
+      sessions.delete(id);
+    }
+  }
+
+  // Limit to MAX_SESSIONS
+  if (sessions.size >= MAX_SESSIONS) {
+    const oldestId = Array.from(sessions.entries())
+      .sort(([, a], [, b]) => a.expiresAt - b.expiresAt)[0][0];
+    sessions.delete(oldestId);
+  }
+
+  const sessionId = randomUUID();
+  sessions.set(sessionId, {
+    createdAt: Date.now(),
+    expiresAt: Date.now() + SESSION_EXPIRY_MS,
+    authenticated: true
+  });
+
+  return sessionId;
+}
 
 export default function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://www.berkedogan.com.tr");
@@ -18,8 +49,6 @@ export default function handler(req, res) {
 
   const { password } = req.body;
   const storedHash = process.env.VERCEL_PASSWORD_HASH;
-  const jwtSecret = process.env.JWT_SECRET;
-  const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
 
   if (!storedHash) {
     return res.status(500).json({ success: false, error: "Missing hash" });
@@ -31,48 +60,20 @@ export default function handler(req, res) {
 
   const ok = bcrypt.compareSync(password, storedHash);
 
-  if (!ok) return res.status(401).json({ success: false });
-
-  if (!jwtSecret || !jwtRefreshSecret) {
-    return res.status(500).json({ success: false, error: "Missing JWT secrets" });
+  if (!ok) {
+    return res.status(401).json({ success: false, error: "Invalid password" });
   }
 
-  let accessToken;
-  let refreshToken;
-  try {
-    accessToken = jwt.sign(
-      { authorized: true },
-      jwtSecret,
-      { expiresIn: '15m' }
-    );
+  // Create session
+  const sessionId = createSession();
 
-    refreshToken = jwt.sign(
-      { authorized: true },
-      jwtRefreshSecret,
-      { expiresIn: '7d' }
-    );
-  } catch (err) {
-    return res.status(500).json({ success: false, error: "Token generation failed" });
-  }
+  res.setHeader('Set-Cookie', serialize('sessionId', sessionId, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    maxAge: SESSION_EXPIRY_MS / 1000,
+    path: '/'
+  }));
 
-  res.setHeader('Set-Cookie', [
-    serialize('accessToken', accessToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      maxAge: 15 * 60,
-      path: '/'
-    }),
-    serialize('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60,
-      path: '/'
-    })
-  ]);
-
-  return res.json({ 
-    success: true
-  });
+  return res.json({ success: true });
 }
