@@ -54,14 +54,21 @@ const router = createRouter({
 
 // Navigation guard for protected routes
 router.beforeEach(async (to, from, next) => {
+  console.log(`[Router] Navigating from "${from.path}" to "${to.path}"`);
+  
   if (to.meta.requiresAuth) {
+    console.log(`[Router] Route requires auth, checking...`);
     const isAuthenticated = await checkAuth();
+    
     if (!isAuthenticated) {
+      console.log(`[Router] Not authenticated, redirecting to home`);
       next('/');
     } else {
+      console.log(`[Router] Authenticated, proceeding`);
       next();
     }
   } else {
+    console.log(`[Router] Public route, proceeding`);
     next();
   }
 })
