@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import NavBar from './components/NavBar.vue';
+import { SpeedInsights } from "@vercel/speed-insights/vue"
 </script>
 
 <template>
@@ -11,6 +12,8 @@ import NavBar from './components/NavBar.vue';
     <div id="main-content" role="main" itemscope itemtype="https://schema.org/Person">
       <router-view />
     </div>
+
+    <SpeedInsights />
   </div>
 </template>
 
