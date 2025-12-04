@@ -59,14 +59,14 @@ export default function handler(req, res) {
     serialize('accessToken', accessToken, {
       httpOnly: true,
       secure: true,
-      sameSite: 'strict',
+      sameSite: 'lax',
       maxAge: 15 * 60,
       path: '/'
     }),
     serialize('refreshToken', refreshToken, {
       httpOnly: true,
       secure: true,
-      sameSite: 'strict',
+      sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60,
       path: '/'
     })
