@@ -1,4 +1,7 @@
 import { parse } from "cookie";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.JWT_SECRET || "default-dev-secret";
 
 export default function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://www.berkedogan.com.tr");
@@ -16,16 +19,21 @@ export default function handler(req, res) {
 
   const cookies = parse(req.headers.cookie || '');
   const sessionId = cookies.sessionId;
+  const authToken = cookies.authToken;
 
-  // Sadece session cookie'nin varlığını kontrol et
-  // Gerçek validasyon frontend'de router guard tarafından yapılır
-  if (!sessionId) {
-    return res.status(401).json({ success: false, error: "No session" });
+  // Both sessionId and token must exist
+  if (!sessionId || !authToken) {
+    return res.status(401).json({ success: false, error: "No session or token" });
   }
 
-  // Session var, valid assume et
-  // (Vercel serverless ortamında memory sharing olmadığı için
-  // backend'de full validation yapamazsın, ama sessionId'nin varlığı
-  // kullanıcının en azından bir kez giriş yaptığını gösterir)
-  return res.json({ success: true });
+  // Verify JWT token
+  try {
+    const decoded = jwt.verify(authToken, JWT_SECRET);
+    if (decoded.sessionId !== sessionId) {
+      return res.status(401).json({ success: false, error: "Token mismatch" });
+    }
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(401).json({ success: false, error: "Invalid token", details: err.message });
+  }
 }

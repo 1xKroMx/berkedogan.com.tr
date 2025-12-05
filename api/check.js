@@ -1,11 +1,13 @@
 import bcrypt from "bcryptjs";
 import { serialize } from "cookie";
 import { randomUUID } from "crypto";
+import jwt from "jsonwebtoken";
 
 // In-memory session store (max 1000 concurrent sessions)
 const sessions = new Map();
 const MAX_SESSIONS = 1000;
-const SESSION_EXPIRY_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
+const SESSION_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const JWT_SECRET = process.env.JWT_SECRET || "default-dev-secret";
 
 function createSession() {
   // Clean expired sessions
@@ -24,13 +26,22 @@ function createSession() {
   }
 
   const sessionId = randomUUID();
+  const expiresAt = Date.now() + SESSION_EXPIRY_MS;
+  
   sessions.set(sessionId, {
     createdAt: Date.now(),
-    expiresAt: Date.now() + SESSION_EXPIRY_MS,
+    expiresAt,
     authenticated: true
   });
 
-  return sessionId;
+  // Generate JWT token
+  const token = jwt.sign(
+    { sessionId, authenticated: true },
+    JWT_SECRET,
+    { expiresIn: '30d' }
+  );
+
+  return { sessionId, token };
 }
 
 export default function handler(req, res) {
@@ -64,16 +75,26 @@ export default function handler(req, res) {
     return res.status(401).json({ success: false, error: "Invalid password" });
   }
 
-  // Create session
-  const sessionId = createSession();
+  // Create session with JWT
+  const { sessionId, token } = createSession();
 
-  res.setHeader('Set-Cookie', serialize('sessionId', sessionId, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-    maxAge: SESSION_EXPIRY_MS / 1000,
-    path: '/'
-  }));
+  // Set both sessionId and token as separate secure cookies
+  res.setHeader('Set-Cookie', [
+    serialize('sessionId', sessionId, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: SESSION_EXPIRY_MS / 1000,
+      path: '/'
+    }),
+    serialize('authToken', token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: SESSION_EXPIRY_MS / 1000,
+      path: '/'
+    })
+  ]);
 
   return res.json({ success: true });
 }
