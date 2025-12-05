@@ -23,7 +23,7 @@ const completedTasks = computed(() => tasks.value.filter(t => t.completed))
             </div>
             <div class="completed-tasks">
                 <h3 style="color: var(--color-primary);">~ Completed Tasks ~</h3>
-                <label class="task" v-for="task in completedTasks" :key="task.id">
+                <label class="task-completed" v-for="task in completedTasks" :key="task.id">
                     <input type="checkbox" v-model="task.completed" />
                     {{ task.title }}
                 </label>
@@ -46,4 +46,13 @@ const completedTasks = computed(() => tasks.value.filter(t => t.completed))
      border-radius: 8px;
      border: 1px solid var(--color-text-primary);
  }
+    .task-completed {
+        position: relative;
+        background-color: var(--color-primary);
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid black;
+        text-decoration: line-through;
+        color: var(--color-text-secondary);
+    }
 </style>
