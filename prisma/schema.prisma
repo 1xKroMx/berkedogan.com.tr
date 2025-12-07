@@ -7,7 +7,11 @@ generator client {
 }
 
 model Task {
-  id        Int      @id @default(autoincrement())
-  title     String
-  createdAt DateTime @default(now())
+  id          String    @id @default(uuid())
+  title       String
+  category    String
+  status      String
+  created_at  DateTime  @default(now())
+  due_date    DateTime?
+  description String?
 }

@@ -1,11 +1,72 @@
 <script setup lang="ts">
-import { ref, computed, vModelCheckbox } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
-const tasks = ref([
-    { id: 1, title: 'Bugünün componentini tamamla.', completed: false },
-    { id: 2, title: 'Task Two', completed: true },
-    { id: 3, title: 'Task Three', completed: false },
-])
+interface Task {
+  id: string;
+  title: string;
+  category: string;
+  status: 'pending' | 'done';
+  created_at: string;
+  due_date?: string;
+  description?: string;
+}
+
+const tasks = ref<Task[]>([])
+const loading = ref(true)
+const error = ref('')
+
+async function fetchTasks() {
+  try {
+    loading.value = true
+    const res = await fetch('/api/tasks')
+    if (!res.ok) {
+      if (res.status === 401) {
+        error.value = 'Unauthorized. Please login.'
+      } else {
+        error.value = 'Failed to fetch tasks'
+      }
+      return
+    }
+    const data = await res.json()
+    if (data.success) {
+      tasks.value = data.data
+    } else {
+      error.value = data.error || 'Unknown error'
+    }
+  } catch (e) {
+    error.value = 'Network error'
+  } finally {
+    loading.value = false
+  }
+}
+
+async function toggleTaskStatus(task: Task) {
+  const newStatus = task.status === 'done' ? 'pending' : 'done'
+  // Optimistic update
+  task.status = newStatus
+  
+  try {
+    const res = await fetch(`/api/tasks/${task.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    })
+    
+    if (!res.ok) {
+      // Revert on error
+      task.status = newStatus === 'done' ? 'pending' : 'done'
+      console.error('Failed to update task')
+    }
+  } catch (e) {
+    task.status = newStatus === 'done' ? 'pending' : 'done'
+    console.error('Network error updating task')
+  }
+}
+
+onMounted(() => {
+  fetchTasks()
+})
+
 const timeRemaining = computed(() => {
     const now = new Date()
     const endOfDay = new Date()
@@ -15,22 +76,19 @@ const timeRemaining = computed(() => {
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
     return `${hours}h ${minutes}m`
 })
-if (timeRemaining.value === '0h 0m') {
-    const resetTasks = () => {
-        tasks.value.forEach(task => {
-            task.completed = false
-        })
-    }
-    resetTasks()
-}
 </script>
 <template>
     <div class="tasks-view">
         <h1>Tasks View</h1>
-        <div class="tasks">
+        <div v-if="loading">Loading tasks...</div>
+        <div v-else-if="error" class="error">{{ error }}</div>
+        <div v-else class="tasks">
                 <h3>~ Tasks ~</h3>
-                <label :class="task.completed ? 'task-completed' : 'task'" v-for="task in tasks" :key="task.id">
-                    <input type="checkbox" v-model="task.completed" />
+                <div v-if="tasks.length === 0" class="empty-tasks">
+                    <p>Henüz eklenmiş bir görev yok.</p>
+                </div>
+                <label v-else :class="task.status === 'done' ? 'task-completed' : 'task'" v-for="task in tasks" :key="task.id">
+                    <input type="checkbox" :checked="task.status === 'done'" @change="toggleTaskStatus(task)" />
                     {{ task.title }}
                 </label>
         </div>
@@ -76,6 +134,14 @@ if (timeRemaining.value === '0h 0m') {
 .tasks input[type="checkbox"]:checked {
   box-shadow: 0 0 0 1px var(--color-text-primary);
 }
+
+.empty-tasks {
+    text-align: center;
+    padding: 20px;
+    color: var(--color-text-secondary);
+    font-style: italic;
+}
+
 .daily-clock {
     display: flex;
     align-items: center;
