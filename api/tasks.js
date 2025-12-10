@@ -1,8 +1,8 @@
 import jwt from "jsonwebtoken";
-import { Pool } from "@neondatabase/serverless";
+import { neon } from "@neondatabase/serverless";
 import { parse } from "cookie";
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const sql = neon(process.env.DATABASE_URL);
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://www.berkedogan.com.tr");
@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const cookies = parse(req.headers.cookie || '');
+  const cookies = parse(req.headers.cookie || "");
   const token = cookies.authToken;
 
   if (!token) {
@@ -29,7 +29,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { rows } = await pool.query("SELECT id, title, completed FROM tasks ORDER BY id ASC");
+    const rows = await sql`
+      SELECT id, title, completed FROM tasks ORDER BY id ASC
+    `;
 
     return res.json({
       success: true,
