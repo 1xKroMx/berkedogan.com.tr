@@ -15,6 +15,8 @@ interface Task {
   id: number
   title: string
   completed: boolean
+  isRecurring?: boolean
+  interval?: number
 }
 
 const tasks = ref<Task[]>([])
@@ -27,6 +29,9 @@ const showDeleteModal = ref(false)
 
 // Form data
 const newTaskTitle = ref('')
+const newTaskInterval = ref<number | null>(null)
+const newTaskIsRecurring = ref(false)
+
 const editingTask = ref<Task | null>(null)
 const taskToDelete = ref<Task | null>(null)
 
@@ -89,6 +94,8 @@ const toggleTask = async (task: Task) => {
 
 const openAddModal = () => {
     newTaskTitle.value = ''
+    newTaskInterval.value = null
+    newTaskIsRecurring.value = false
     showAddModal.value = true
 }
 
@@ -100,13 +107,19 @@ const addTask = async () => {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify({ title: newTaskTitle.value })
+            body: JSON.stringify({ 
+                title: newTaskTitle.value,
+                interval: newTaskInterval.value,
+                isRecurring: newTaskIsRecurring.value
+            })
         })
         const data = await res.json()
         if (data.success) {
             tasks.value.push(data.task)
             showAddModal.value = false
             newTaskTitle.value = ''
+            newTaskInterval.value = null
+            newTaskIsRecurring.value = false
         } else {
             console.error("Add Error:", data.error)
         }
@@ -216,6 +229,19 @@ const deleteTask = async () => {
             <div class="modal">
                 <h3>Add New Task</h3>
                 <input v-model="newTaskTitle" placeholder="Task title" @keyup.enter="addTask" />
+                
+                <div class="form-group">
+                    <label>Duration (Days):</label>
+                    <input type="number" v-model="newTaskInterval" placeholder="e.g. 1 for daily" min="1" />
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" v-model="newTaskIsRecurring" />
+                        Döngüye al (Recurring)
+                    </label>
+                </div>
+
                 <div class="modal-actions">
                     <button @click="showAddModal = false">Cancel</button>
                     <button class="btn-primary" @click="addTask">Add</button>

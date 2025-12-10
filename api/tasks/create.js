@@ -31,17 +31,24 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, error: "Invalid token" });
   }
 
-  const { title } = req.body;
+  const { title, isRecurring, interval } = req.body;
 
   if (!title) {
     return res.status(400).json({ success: false, error: "Missing title" });
   }
 
+  let deadline = null;
+  if (interval && interval > 0) {
+    const date = new Date();
+    date.setDate(date.getDate() + parseInt(interval));
+    deadline = date.toISOString();
+  }
+
   try {
     const rows = await sql`
-      INSERT INTO tasks (title, completed)
-      VALUES (${title}, false)
-      RETURNING id, title, completed
+      INSERT INTO tasks (title, completed, "isRecurring", "interval", deadline, "isVisible")
+      VALUES (${title}, false, ${isRecurring || false}, ${interval || null}, ${deadline}, true)
+      RETURNING id, title, completed, "isRecurring", "interval", deadline, "isVisible"
     `;
 
     return res.json({

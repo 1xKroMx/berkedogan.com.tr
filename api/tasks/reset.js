@@ -32,31 +32,38 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Get today's date in Turkey timezone (YYYY-MM-DD)
-    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Istanbul" });
-
-    // Get last reset date
-    const result = await sql`
-      SELECT value FROM system_state WHERE key = 'last_reset'
+    // Find tasks that have passed their deadline and are visible
+    const expiredTasks = await sql`
+      SELECT id, "isRecurring", "interval"
+      FROM tasks
+      WHERE deadline <= NOW() AND "isVisible" = true
     `;
 
-    const lastReset = result.length > 0 ? result[0].value : null;
+    let updates = 0;
 
-    if (lastReset !== today) {
-      // Perform reset
-      await sql`UPDATE tasks SET completed = false`;
-      
-      // Update last_reset
-      await sql`
-        INSERT INTO system_state (key, value)
-        VALUES ('last_reset', ${today})
-        ON CONFLICT (key) DO UPDATE SET value = ${today}
-      `;
-
-      return res.json({ success: true, resetPerformed: true, date: today });
+    for (const task of expiredTasks) {
+      if (task.isRecurring) {
+        // Reset completed status and set new deadline
+        const newDeadline = new Date();
+        newDeadline.setDate(newDeadline.getDate() + task.interval);
+        
+        await sql`
+          UPDATE tasks
+          SET completed = false, deadline = ${newDeadline.toISOString()}
+          WHERE id = ${task.id}
+        `;
+      } else {
+        // Archive the task (hide it)
+        await sql`
+          UPDATE tasks
+          SET "isVisible" = false
+          WHERE id = ${task.id}
+        `;
+      }
+      updates++;
     }
 
-    return res.json({ success: true, resetPerformed: false, date: today });
+    return res.json({ success: true, updatesPerformed: updates });
 
   } catch (err) {
     console.error("Reset Error:", err);

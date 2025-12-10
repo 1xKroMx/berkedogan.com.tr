@@ -30,7 +30,7 @@ export default async function handler(req, res) {
 
   try {
     const rows = await sql`
-      SELECT id, title, completed FROM tasks ORDER BY id ASC
+      SELECT id, title, completed FROM tasks WHERE "isVisible" = true ORDER BY id ASC
     `;
 
     return res.json({
