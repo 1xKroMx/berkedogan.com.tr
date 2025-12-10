@@ -49,7 +49,17 @@ const fetchTasks = async () => {
     }
 }
 
-onMounted(fetchTasks)
+onMounted(async () => {
+    try {
+        await fetch("https://www.berkedogan.com.tr/api/tasks/reset", {
+            method: "POST",
+            credentials: "include"
+        })
+    } catch (e) {
+        console.error("Reset check failed", e)
+    }
+    await fetchTasks()
+})
 
 const toggleTask = async (task: Task) => {
     try {

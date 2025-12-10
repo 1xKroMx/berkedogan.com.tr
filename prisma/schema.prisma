@@ -14,3 +14,10 @@ model Task {
 
   @@map("tasks")
 }
+
+model SystemState {
+  key   String @id
+  value String
+
+  @@map("system_state")
+}
