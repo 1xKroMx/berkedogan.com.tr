@@ -85,7 +85,7 @@
             </a>
 
             <a 
-              href="https://www.linkedin.com/in/berke-doğan-972292359" 
+              href="https://www.linkedin.com/in/berkedoğan"
               target="_blank" 
               rel="noopener noreferrer"
               class="contact-card linkedin-card"
