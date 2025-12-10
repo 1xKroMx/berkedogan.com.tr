@@ -43,7 +43,7 @@ export default async function handler(req, res) {
       UPDATE tasks
       SET completed = NOT completed
       WHERE id = ${id}
-      RETURNING id, title, completed
+      RETURNING id, title, completed, "isRecurring", "interval", deadline, "isVisible"
     `;
 
     if (rows.length === 0) {
