@@ -21,13 +21,8 @@ const tasks = ref<Task[]>([])
 
 onMounted(async () => {
     try {
-        const token = localStorage.getItem("jwt")
-        if (!token) return console.error("JWT Missing")
-
         const res = await fetch("https://www.berkedogan.com.tr/api/tasks", {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
+            credentials: "include"
         })
 
         const data = await res.json()

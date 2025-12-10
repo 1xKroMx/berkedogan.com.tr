@@ -1,33 +1,30 @@
 import jwt from "jsonwebtoken";
 import { Pool } from "@neondatabase/serverless";
+import { parse } from "cookie";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export default async function handler(req, res) {
-  // CORS
   res.setHeader("Access-Control-Allow-Origin", "https://www.berkedogan.com.tr");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Headers", "*");
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
-  if (req.method !== "GET") {
-    return res.status(405).json({ success: false, error: "Method Not Allowed" });
-  }
+  const cookies = parse(req.headers.cookie || '');
+  const token = cookies.authToken;
 
-  const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith("Bearer ")) {
+  if (!token) {
     return res.status(401).json({ success: false, error: "Missing token" });
   }
 
-  const token = auth.split(" ")[1];
   let decoded;
-
   try {
     decoded = jwt.verify(token, process.env.JWT_SECRET);
-  } catch (e) {
+  } catch {
     return res.status(401).json({ success: false, error: "Invalid token" });
   }
 
