@@ -33,8 +33,8 @@ export default async function handler(req, res) {
 
   const { title, isRecurring, interval } = req.body;
 
-  if (!title) {
-    return res.status(400).json({ success: false, error: "Missing title" });
+  if (!title || !interval) {
+    return res.status(400).json({ success: false, error: "Missing title or duration" });
   }
 
   let deadline = null;
@@ -42,6 +42,8 @@ export default async function handler(req, res) {
     const date = new Date();
     date.setDate(date.getDate() + parseInt(interval));
     deadline = date.toISOString();
+  } else {
+    return res.status(400).json({ success: false, error: "Duration must be greater than 0" });
   }
 
   try {

@@ -91,7 +91,10 @@ const openAddModal = () => {
 }
 
 const addTask = async () => {
-    if (!newTaskTitle.value.trim()) return
+    if (!newTaskTitle.value.trim() || !newTaskInterval.value) {
+        alert("Please enter both title and duration (days).")
+        return
+    }
     
     try {
         const res = await fetch("https://www.berkedogan.com.tr/api/tasks/create", {
