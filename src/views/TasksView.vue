@@ -1,22 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 
-const timeRemaining = computed(() => {
-    const now = new Date()
-    const endOfDay = new Date()
-    endOfDay.setHours(23, 59, 59, 999)
-    const diff = endOfDay.getTime() - now.getTime()
-    const hours = Math.floor(diff / (1000 * 60 * 60))
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-    return `${hours}h ${minutes}m`
-})
-
 interface Task {
   id: number
   title: string
   completed: boolean
   isRecurring?: boolean
   interval?: number
+  deadline?: string
 }
 
 const tasks = ref<Task[]>([])
@@ -143,7 +134,9 @@ const updateTask = async () => {
             credentials: "include",
             body: JSON.stringify({ 
                 id: editingTask.value.id,
-                title: editingTask.value.title
+                title: editingTask.value.title,
+                interval: editingTask.value.interval,
+                isRecurring: editingTask.value.isRecurring
             })
         })
         const data = await res.json()
@@ -189,6 +182,12 @@ const deleteTask = async () => {
         console.error("Delete Error:", err)
     }
 }
+
+const formatDate = (dateString?: string) => {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    return date.toLocaleDateString('tr-TR', { month: 'short', day: 'numeric' })
+}
 </script>
 <template>
     <div class="tasks-view">
@@ -212,16 +211,19 @@ const deleteTask = async () => {
                             :checked="task.completed" 
                             @change="toggleTask(task)" 
                         />
-                        <span>{{ task.title }}</span>
+                        <div class="task-info">
+                            <span>{{ task.title }}</span>
+                            <small v-if="task.deadline" class="task-deadline">
+                                {{ formatDate(task.deadline) }}
+                                <span v-if="task.isRecurring">↻</span>
+                            </small>
+                        </div>
                     </div>
                     <div class="task-actions">
                         <button class="btn-icon" @click="openEditModal(task)">✎</button>
                         <button class="btn-icon btn-delete" @click="confirmDelete(task)">🗑</button>
                     </div>
                 </div>
-        </div>
-        <div class="daily-clock">
-        <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#48752C"><path d="M592-302 450-444v-196h60v171l124 124-42 43ZM450-730v-90h60v90h-60Zm280 280v-60h90v60h-90ZM450-140v-90h60v90h-60ZM140-450v-60h90v60h-90ZM480.27-80q-82.74 0-155.5-31.5Q252-143 197.5-197.5t-86-127.34Q80-397.68 80-480.5t31.5-155.66Q143-709 197.5-763t127.34-85.5Q397.68-880 480.5-880t155.66 31.5Q709-817 763-763t85.5 127Q880-563 880-480.27q0 82.74-31.5 155.5Q817-252 763-197.68q-54 54.31-127 86Q563-80 480.27-80Zm.23-60Q622-140 721-239.5t99-241Q820-622 721.19-721T480-820q-141 0-240.5 98.81T140-480q0 141 99.5 240.5t241 99.5Zm-.5-340Z"/></svg><small>There is {{ timeRemaining }} to new tasks.</small>
         </div>
 
         <!-- Modals -->
@@ -253,6 +255,19 @@ const deleteTask = async () => {
             <div class="modal">
                 <h3>Edit Task</h3>
                 <input v-if="editingTask" v-model="editingTask.title" @keyup.enter="updateTask" />
+                
+                <div class="form-group" v-if="editingTask">
+                    <label>Duration (Days):</label>
+                    <input type="number" v-model="editingTask.interval" placeholder="e.g. 1 for daily" min="1" />
+                </div>
+
+                <div class="form-group checkbox-group" v-if="editingTask">
+                    <label>
+                        <input type="checkbox" v-model="editingTask.isRecurring" />
+                        Döngüye al (Recurring)
+                    </label>
+                </div>
+
                 <div class="modal-actions">
                     <button @click="showEditModal = false">Cancel</button>
                     <button class="btn-primary" @click="updateTask">Save</button>
@@ -310,6 +325,18 @@ const deleteTask = async () => {
     display: flex;
     align-items: center;
     gap: 10px;
+    flex: 1;
+}
+
+.task-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.task-deadline {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    margin-top: 2px;
 }
 
 .task-completed .task-content span {
@@ -323,13 +350,6 @@ const deleteTask = async () => {
 
 .tasks input[type="checkbox"]:checked {
   box-shadow: 0 0 0 1px var(--color-text-primary);
-}
-.daily-clock {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.9rem;
-    color: var(--color-text-secondary);
 }
 
 .header {
@@ -401,6 +421,28 @@ const deleteTask = async () => {
     margin: 10px 0;
     border: 1px solid #ccc;
     border-radius: 4px;
+}
+
+.form-group {
+    margin: 10px 0;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.checkbox-group input {
+    width: auto;
+    margin: 0;
 }
 
 .modal-actions {
