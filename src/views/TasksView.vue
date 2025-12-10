@@ -1,11 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, vModelCheckbox } from 'vue'
+import { ref, computed, vModelCheckbox, onMounted } from 'vue'
 
-const tasks = ref([
-    { id: 1, title: 'Bugünün componentini tamamla.', completed: false },
-    { id: 2, title: 'Task Two', completed: true },
-    { id: 3, title: 'Task Three', completed: false },
-])
 const timeRemaining = computed(() => {
     const now = new Date()
     const endOfDay = new Date()
@@ -15,14 +10,37 @@ const timeRemaining = computed(() => {
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
     return `${hours}h ${minutes}m`
 })
-if (timeRemaining.value === '0h 0m') {
-    const resetTasks = () => {
-        tasks.value.forEach(task => {
-            task.completed = false
-        })
-    }
-    resetTasks()
+
+interface Task {
+  id: number
+  title: string
+  completed: boolean
 }
+
+const tasks = ref<Task[]>([])
+
+onMounted(async () => {
+    try {
+        const token = localStorage.getItem("jwt")
+        if (!token) return console.error("JWT Missing")
+
+        const res = await fetch("https://www.berkedogan.com.tr/api/tasks", {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        })
+
+        const data = await res.json()
+
+        if (data.success) {
+            tasks.value = data.tasks
+        } else {
+            console.error("API Error:", data.error)
+        }
+    } catch (err) {
+        console.error("Fetch Error:", err)
+    }
+})
 </script>
 <template>
     <div class="tasks-view">
