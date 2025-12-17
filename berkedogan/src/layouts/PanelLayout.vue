@@ -6,7 +6,7 @@ import SideNav from '@/components/panel/SideNav.vue'
   <div class="panel">
     <header class="top" role="banner">
       <div class="topInner">
-        <h1 class="title">Panel</h1>
+        <h1 class="title">Control Panel</h1>
       </div>
     </header>
 
