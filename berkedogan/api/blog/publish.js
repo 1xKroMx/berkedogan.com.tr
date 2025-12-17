@@ -65,14 +65,29 @@ export default async function handler(req, res) {
   const id = randomUUID();
   const fileName = `${dateISO}__${id}.md`;
 
-  // Repo içine write: GitHub Contents API ile commit
-  // targetPath örn: blog/src/data/blog-entries/YYYY-MM-DD__uuid.md
-  const owner = mustEnv("GITHUB_OWNER");
-  const repo = mustEnv("GITHUB_REPO");
-  const branch = process.env.GITHUB_BRANCH || "main";
-  const tokenGH = mustEnv("GITHUB_TOKEN");
-  const targetDir = process.env.BLOG_ENTRIES_DIR || "blog/src/data/blog-entries";
-  const path = `${targetDir}/${fileName}`;
+  let owner;
+  let repo;
+  let tokenGH;
+  let branch;
+  let targetDir;
+  let path;
+
+  try {
+    // Repo içine write: GitHub Contents API ile commit
+    // targetPath örn: blog/src/data/blog-entries/YYYY-MM-DD__uuid.md
+    owner = mustEnv("GITHUB_OWNER");
+    repo = mustEnv("GITHUB_REPO");
+    tokenGH = mustEnv("GITHUB_TOKEN");
+    branch = process.env.GITHUB_BRANCH || "main";
+    targetDir = process.env.BLOG_ENTRIES_DIR || "blog/src/data/blog-entries";
+    path = `${targetDir}/${fileName}`;
+  } catch (e) {
+    console.error("[blog/publish] Missing env", e);
+    return res.status(500).json({
+      success: false,
+      error: e?.message || "Missing environment variables",
+    });
+  }
 
   const body = {
     message: `blog: add ${fileName}`,
@@ -157,6 +172,11 @@ export default async function handler(req, res) {
       build: { triggered: Boolean(hook) },
     });
   } catch (err) {
-    return res.status(500).json({ success: false, error: "Server error" });
+    console.error("[blog/publish] Server error", err);
+    return res.status(500).json({
+      success: false,
+      error: "Server error",
+      details: err?.message || String(err),
+    });
   }
 }
