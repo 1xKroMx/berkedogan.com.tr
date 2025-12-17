@@ -7,12 +7,14 @@ const sql = neon(process.env.DATABASE_URL);
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://www.berkedogan.com.tr");
   res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "*");
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
+
+  const action = req.query?.action;
 
   const cookies = parse(req.headers.cookie || "");
   const token = cookies.authToken;
@@ -29,14 +31,52 @@ export default async function handler(req, res) {
   }
 
   try {
-    const rows = await sql`
-      SELECT id, title, completed, "isRecurring", "interval", deadline FROM tasks WHERE "isVisible" = true ORDER BY id ASC
-    `;
+    if (req.method === "GET" && !action) {
+      const rows = await sql`
+        SELECT id, title, completed, "isRecurring", "interval", deadline FROM tasks WHERE "isVisible" = true ORDER BY id ASC
+      `;
 
-    return res.json({
-      success: true,
-      tasks: rows,
-    });
+      return res.json({
+        success: true,
+        tasks: rows,
+      });
+    }
+
+    if (req.method === "POST" && action === "reset") {
+      const expiredTasks = await sql`
+        SELECT id, "isRecurring", "interval"
+        FROM tasks
+        WHERE deadline <= NOW() AND "isVisible" = true
+      `;
+
+      let updates = 0;
+
+      for (const task of expiredTasks) {
+        if (task.isRecurring) {
+          const newDeadline = new Date();
+          newDeadline.setDate(newDeadline.getDate() + task.interval);
+
+          await sql`
+            UPDATE tasks
+            SET completed = false, deadline = ${newDeadline.toISOString()}
+            WHERE id = ${task.id}
+          `;
+        } else {
+          await sql`
+            UPDATE tasks
+            SET "isVisible" = false
+            WHERE id = ${task.id}
+          `;
+        }
+        updates++;
+      }
+
+      return res.json({ success: true, updatesPerformed: updates });
+    }
+
+    return res
+      .status(405)
+      .json({ success: false, error: "Method not allowed" });
 
   } catch (err) {
     console.error("DB Error:", err);

@@ -4,6 +4,10 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/api/tasks/reset",
+      "destination": "/api/tasks?action=reset"
+    },
+    {
       "source": "/((?!api/)(?!.*\\..*).*)",
       "destination": "/index.html"
     }
