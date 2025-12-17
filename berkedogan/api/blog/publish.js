@@ -12,6 +12,13 @@ function toBase64(str) {
   return Buffer.from(str, "utf8").toString("base64");
 }
 
+function encodeGitHubPath(path) {
+  return path
+    .split("/")
+    .map((seg) => encodeURIComponent(seg))
+    .join("/");
+}
+
 function isValidDateISO(dateISO) {
   return typeof dateISO === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateISO);
 }
@@ -74,8 +81,35 @@ export default async function handler(req, res) {
   };
 
   try {
+    // Enforce: günde 1 yazı (dateISO__*.md varsa yayınlama)
+    const listRes = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${encodeGitHubPath(targetDir)}?ref=${encodeURIComponent(branch)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${tokenGH}`,
+          "X-GitHub-Api-Version": "2022-11-28",
+          "User-Agent": "berkedogan-panel",
+        },
+      }
+    );
+
+    if (listRes.ok) {
+      const listJson = await listRes.json().catch(() => null);
+      if (Array.isArray(listJson)) {
+        const already = listJson.some(
+          (item) => typeof item?.name === "string" && item.name.startsWith(`${dateISO}__`) && item.name.endsWith(".md")
+        );
+        if (already) {
+          return res.status(409).json({
+            success: false,
+            error: "Bu tarih için zaten bir yazı var.",
+          });
+        }
+      }
+    }
+
     const ghRes = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`,
+      `https://api.github.com/repos/${owner}/${repo}/contents/${encodeGitHubPath(path)}`,
       {
         method: "PUT",
         headers: {

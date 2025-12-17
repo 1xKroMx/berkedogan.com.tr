@@ -5,6 +5,9 @@ const markdown = ref('')
 const isPublishing = ref(false)
 const error = ref('')
 const lastPublishedId = ref('')
+const lastPublishedUrl = ref('')
+
+const blogBaseUrl = (import.meta.env.VITE_BLOG_BASE_URL as string | undefined) || 'https://blog.berkedogan.com.tr'
 
 const todayISO = computed(() => {
   const now = new Date()
@@ -17,6 +20,7 @@ const todayISO = computed(() => {
 const publish = async () => {
   error.value = ''
   lastPublishedId.value = ''
+  lastPublishedUrl.value = ''
 
   if (!markdown.value.trim()) {
     error.value = 'İçerik boş olamaz.'
@@ -42,6 +46,9 @@ const publish = async () => {
     }
 
     lastPublishedId.value = String(data.id || '')
+    if (lastPublishedId.value) {
+      lastPublishedUrl.value = `${blogBaseUrl.replace(/\/$/, '')}/${lastPublishedId.value}`
+    }
     markdown.value = ''
   } catch (e) {
     error.value = 'Sunucuya bağlanılamıyor.'
@@ -74,6 +81,9 @@ const publish = async () => {
     <p v-if="error" class="error">{{ error }}</p>
     <p v-else-if="lastPublishedId" class="ok">
       Yayınlandı. id: {{ lastPublishedId }}
+      <a v-if="lastPublishedUrl" class="link" :href="lastPublishedUrl" target="_blank" rel="noreferrer">
+        Blogda aç
+      </a>
     </p>
   </section>
 </template>
@@ -136,6 +146,11 @@ const publish = async () => {
 
 .ok {
   margin: 0;
+  color: var(--color-text-primary);
+}
+
+.link {
+  margin-left: var(--spacing-sm);
   color: var(--color-text-primary);
 }
 </style>
