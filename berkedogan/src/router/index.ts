@@ -3,6 +3,8 @@ import HomeView from '../views/HomeView.vue'
 import AboutView from '@/views/AboutView.vue'
 import ContactView from '@/views/ContactView.vue'
 import TasksView from '@/views/TasksView.vue'
+import PanelLayout from '@/layouts/PanelLayout.vue'
+import BlogEditorView from '@/views/BlogEditorView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -38,16 +40,40 @@ const router = createRouter({
       }
     },
     {
-      path: '/tasks',
-      name: 'Tasks',
-      component: TasksView,
+      path: '/panel',
+      component: PanelLayout,
       meta: {
-        title: 'Tasks — Berke Doğan',
-        description:
-          'My private task management app built with Vue 3 and TypeScript.',
-        requiresAuth: true
-      }
-    }
+        requiresAuth: true,
+        title: 'Panel — Berke Doğan',
+      },
+      children: [
+        {
+          path: 'tasks',
+          name: 'PanelTasks',
+          component: TasksView,
+          meta: {
+            title: 'Tasks — Berke Doğan',
+            description: 'My private task management app built with Vue 3 and TypeScript.',
+          },
+        },
+        {
+          path: 'blog',
+          name: 'PanelBlog',
+          component: BlogEditorView,
+          meta: {
+            title: 'Blog Editor — Berke Doğan',
+          },
+        },
+      ],
+    },
+    {
+      // Backward compatible entrypoint for old links & PasswordModal redirect
+      path: '/tasks',
+      redirect: '/panel/tasks',
+      meta: {
+        requiresAuth: true,
+      },
+    },
   ],
 })
 
