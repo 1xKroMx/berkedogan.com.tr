@@ -4,6 +4,7 @@ import { computed, ref } from 'vue'
 const markdown = ref('')
 const isPublishing = ref(false)
 const error = ref('')
+const errorDetails = ref('')
 const lastPublishedId = ref('')
 const lastPublishedUrl = ref('')
 
@@ -19,6 +20,7 @@ const todayISO = computed(() => {
 
 const publish = async () => {
   error.value = ''
+  errorDetails.value = ''
   lastPublishedId.value = ''
   lastPublishedUrl.value = ''
 
@@ -39,9 +41,19 @@ const publish = async () => {
       }),
     })
 
-    const data = await res.json().catch(() => null)
+    const rawText = await res.text().catch(() => '')
+    const data = rawText ? (() => {
+      try {
+        return JSON.parse(rawText)
+      } catch {
+        return null
+      }
+    })() : null
+
     if (!res.ok || !data?.success) {
-      error.value = data?.error || 'Publish başarısız.'
+      error.value = data?.error || `Publish başarısız. (HTTP ${res.status})`
+      if (data?.details) errorDetails.value = typeof data.details === 'string' ? data.details : JSON.stringify(data.details)
+      else if (rawText && !data) errorDetails.value = rawText
       return
     }
 
@@ -79,6 +91,7 @@ const publish = async () => {
     </div>
 
     <p v-if="error" class="error">{{ error }}</p>
+    <p v-if="errorDetails" class="errorDetails">{{ errorDetails }}</p>
     <p v-else-if="lastPublishedId" class="ok">
       Yayınlandı. id: {{ lastPublishedId }}
       <a v-if="lastPublishedUrl" class="link" :href="lastPublishedUrl" target="_blank" rel="noreferrer">
@@ -142,6 +155,13 @@ const publish = async () => {
 .error {
   margin: 0;
   color: red;
+}
+
+.errorDetails {
+  margin: 0;
+  color: red;
+  opacity: 0.85;
+  white-space: pre-wrap;
 }
 
 .ok {
