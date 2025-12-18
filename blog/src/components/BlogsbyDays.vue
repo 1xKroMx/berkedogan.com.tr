@@ -24,7 +24,7 @@ const prettyDate = computed(() => {
 <template>
 	<RouterLink class="dayCard" :to="`/${id}`">
 		<div class="dayText">{{ prettyDate }}</div>
-		<div class="hint">Detayı aç</div>
+		<div class="hint">Click to open</div>
 	</RouterLink>
 </template>
 

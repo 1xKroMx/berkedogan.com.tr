@@ -28,11 +28,11 @@ const prettyDate = computed(() => {
 
 <template>
   <section class="page">
-    <RouterLink class="back" to="/">← Geri</RouterLink>
+    <RouterLink class="back" to="/">← Go Back</RouterLink>
 
     <div v-if="!post" class="missing">
-      <h1 class="missingTitle">Yazı bulunamadı</h1>
-      <p class="missingText">Uups. Yanlış geldin galiba. Bu id için veri yok.</p>
+      <h1 class="missingTitle">Post not found</h1>
+      <p class="missingText">Oops. It seems you came to the wrong place. There is no data for this id.</p>
     </div>
 
     <article v-else class="post">
