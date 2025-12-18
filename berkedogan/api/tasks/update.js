@@ -1,8 +1,7 @@
 import jwt from "jsonwebtoken";
-import { neon } from "@neondatabase/serverless";
 import { parse } from "cookie";
 
-const sql = neon(process.env.DATABASE_URL);
+import { getSql, logDbError } from "../_db";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://www.berkedogan.com.tr");
@@ -45,6 +44,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    const sql = getSql();
     const rows = await sql`
       UPDATE tasks
       SET 
@@ -66,7 +66,7 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error("DB Error:", err);
+    logDbError(err);
     return res.status(500).json({ success: false, error: "Database error" });
   }
 }

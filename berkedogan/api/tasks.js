@@ -1,8 +1,7 @@
 import jwt from "jsonwebtoken";
-import { neon } from "@neondatabase/serverless";
 import { parse } from "cookie";
 
-const sql = neon(process.env.DATABASE_URL);
+import { getSql, logDbError } from "./_db";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://www.berkedogan.com.tr");
@@ -32,6 +31,7 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === "GET" && !action) {
+      const sql = getSql();
       const rows = await sql`
         SELECT id, title, completed, "isRecurring", "interval", deadline FROM tasks WHERE "isVisible" = true ORDER BY id ASC
       `;
@@ -43,6 +43,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "POST" && action === "reset") {
+      const sql = getSql();
       const expiredTasks = await sql`
         SELECT id, "isRecurring", "interval"
         FROM tasks
@@ -79,7 +80,7 @@ export default async function handler(req, res) {
       .json({ success: false, error: "Method not allowed" });
 
   } catch (err) {
-    console.error("DB Error:", err);
+    logDbError(err);
     return res.status(500).json({ success: false, error: "Database error" });
   }
 }
