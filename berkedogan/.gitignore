@@ -30,3 +30,8 @@ coverage
 *.tsbuildinfo
 
 /src/generated/prisma
+
+# Environment (never commit secrets)
+.env
+.env.*
+!.env.example
