@@ -10,8 +10,8 @@ const postsSorted = computed(() => {
 
 <template>
   <section class="page">
-    <h1 class="title">Bloğum</h1>
-    <p class="subtitle">Bloğuma hoş geldiniz! Buraya ya beni tanıdığınız için, ya da şans eseri düştünüz. :)</p>
+    <h1 class="title">My Blog</h1>
+    <p class="subtitle">Welcome to my blog! You came here either because you know me or by chance. :)</p>
 
     <div class="list">
       <BlogsbyDays v-for="post in postsSorted" :key="post.id" :id="post.id" :date-iso="post.dateISO" />
