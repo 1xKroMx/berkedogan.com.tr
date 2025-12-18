@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import { parse } from "cookie";
 
-import { getSql, logDbError } from "./_db";
+import { getSql, logDbError } from "./_db.js";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://www.berkedogan.com.tr");
