@@ -6,7 +6,7 @@ import { RouterView } from 'vue-router'
 	<div class="appShell">
 		<header class="topBar">
 			<a class="brand" href="/">blog.berkedogan.com.tr</a>
-			<div class="meta">Her gün yeni blog</div>
+			<div class="meta">New blog every day</div>
 		</header>
 
 		<main class="content">
