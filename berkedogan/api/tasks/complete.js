@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import { parse } from "cookie";
-import { getSql, logDbError } from "../_db";
+import { getSql, logDbError } from "../_db.js";
 
 const sql = getSql();
 
