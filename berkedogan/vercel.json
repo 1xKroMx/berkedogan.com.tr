@@ -4,8 +4,44 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/api/tasks/complete",
+      "destination": "/api/tasks?action=complete"
+    },
+    {
+      "source": "/api/tasks/create",
+      "destination": "/api/tasks?action=create"
+    },
+    {
+      "source": "/api/tasks/update",
+      "destination": "/api/tasks?action=update"
+    },
+    {
+      "source": "/api/tasks/delete",
+      "destination": "/api/tasks?action=delete"
+    },
+    {
       "source": "/api/tasks/reset",
       "destination": "/api/tasks?action=reset"
+    },
+    {
+      "source": "/api/blog/entries",
+      "destination": "/api/blog?action=entries"
+    },
+    {
+      "source": "/api/blog/get",
+      "destination": "/api/blog?action=get"
+    },
+    {
+      "source": "/api/blog/publish",
+      "destination": "/api/blog?action=publish"
+    },
+    {
+      "source": "/api/blog/update",
+      "destination": "/api/blog?action=update"
+    },
+    {
+      "source": "/api/blog/delete",
+      "destination": "/api/blog?action=delete"
     },
     {
       "source": "/((?!api/)(?!.*\\..*).*)",

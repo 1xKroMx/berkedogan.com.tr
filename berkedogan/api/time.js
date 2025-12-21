@@ -1,8 +1,8 @@
 import jwt from "jsonwebtoken";
 import { parse } from "cookie";
 
-import { getSql, logDbError } from "./_db.js";
-import { toIstanbulIsoString } from "./_time.js";
+import { getSql, logDbError } from "../lib/db.js";
+import { toIstanbulIsoString } from "../lib/time.js";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://www.berkedogan.com.tr");
