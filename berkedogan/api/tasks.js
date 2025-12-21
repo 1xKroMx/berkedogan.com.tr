@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     if (req.method === "GET" && !action) {
       const sql = getSql();
       const rows = await sql`
-        SELECT id, title, completed, "isRecurring", "interval", deadline FROM tasks WHERE "isVisible" = true ORDER BY id ASC
+        SELECT id, title, completed, "completedAt", "isRecurring", "interval", deadline FROM tasks WHERE "isVisible" = true ORDER BY id ASC
       `;
 
       return res.json({
@@ -59,7 +59,7 @@ export default async function handler(req, res) {
 
           await sql`
             UPDATE tasks
-            SET completed = false, deadline = ${newDeadline.toISOString()}
+            SET completed = false, "completedAt" = NULL, deadline = ${newDeadline.toISOString()}
             WHERE id = ${task.id}
           `;
         } else {

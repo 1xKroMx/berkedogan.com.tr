@@ -50,7 +50,7 @@ export default async function handler(req, res) {
     const rows = await sql`
       INSERT INTO tasks (title, completed, "isRecurring", "interval", deadline, "isVisible")
       VALUES (${title}, false, ${isRecurring || false}, ${interval || null}, ${deadline}, true)
-      RETURNING id, title, completed, "isRecurring", "interval", deadline, "isVisible"
+      RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline, "isVisible"
     `;
 
     return res.json({

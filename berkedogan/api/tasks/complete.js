@@ -42,8 +42,9 @@ export default async function handler(req, res) {
     const rows = await sql`
       UPDATE tasks
       SET completed = NOT completed
+        , "completedAt" = CASE WHEN NOT completed THEN NOW() ELSE NULL END
       WHERE id = ${id}
-      RETURNING id, title, completed, "isRecurring", "interval", deadline, "isVisible"
+      RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline, "isVisible"
     `;
 
     if (rows.length === 0) {

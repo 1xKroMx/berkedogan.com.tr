@@ -53,7 +53,7 @@ export default async function handler(req, res) {
         "interval" = ${interval || null},
         deadline = ${deadline}
       WHERE id = ${id}
-      RETURNING id, title, completed, "isRecurring", "interval", deadline
+      RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline
     `;
 
     if (rows.length === 0) {
