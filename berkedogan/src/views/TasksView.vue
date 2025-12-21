@@ -443,7 +443,7 @@ const formatDate = (dateString?: string) => {
      padding: 15px 20px;
      border-radius: 8px;
      border: 1px solid var(--color-text-primary);
-     transition: background-color 0.3s ease;
+     transition: background-color 0.5s ease;
      display: flex;
      justify-content: space-between;
      align-items: center;
@@ -456,7 +456,7 @@ const formatDate = (dateString?: string) => {
       border-radius: 8px;
       border: 1px solid black;
       color: var(--color-text-secondary);
-      transition: background-color 0.3s ease;
+      transition: background-color 0.5s ease;
       display: flex;
       justify-content: space-between;
       align-items: center;
