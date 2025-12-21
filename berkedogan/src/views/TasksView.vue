@@ -90,9 +90,11 @@ const overdueIncompleteRedAlpha = (task: Task) => {
 
     const elapsed = nowMs.value - deadlineMs
     const ratio = clamp01(elapsed / WINDOW_24H_MS)
-    const minMix = 0.05
-    const maxMix = 0.25
-    return minMix + (maxMix - minMix) * ratio
+    // More visible ramp: starts noticeably red and gets clearly red by the end.
+    const eased = Math.sqrt(ratio)
+    const minMix = 0.12
+    const maxMix = 0.6
+    return minMix + (maxMix - minMix) * eased
 }
 
 const overdueTextStyle = (task: Task) => {
