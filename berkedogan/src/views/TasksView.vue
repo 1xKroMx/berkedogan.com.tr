@@ -160,7 +160,7 @@ const highlightCompletedUntilMsById = ref<Record<number, number>>({})
 
 const isHighlightedCompletion = (task: Task) => {
     const until = highlightCompletedUntilMsById.value[task.id]
-    return Boolean(until && nowMs.value < until)
+    return Boolean(until && Date.now() < until)
 }
 
 const toggleTask = async (task: Task) => {
