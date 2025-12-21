@@ -21,6 +21,49 @@ const WINDOW_24H_MS = 24 * 60 * 60 * 1000
 
 const clamp01 = (value: number) => Math.max(0, Math.min(1, value))
 
+type Rgb = { r: number; g: number; b: number }
+
+const baseTextRgb = ref<Rgb | null>(null)
+const DANGER_RED: Rgb = { r: 220, g: 53, b: 69 }
+
+const parseCssColorToRgb = (input: string): Rgb | null => {
+    const value = input.trim()
+    if (!value) return null
+
+    if (value.startsWith('#')) {
+        const hex = value.slice(1)
+        const isShort = hex.length === 3
+        const isLong = hex.length === 6
+        if (!isShort && !isLong) return null
+
+        const r = parseInt(isShort ? hex[0] + hex[0] : hex.slice(0, 2), 16)
+        const g = parseInt(isShort ? hex[1] + hex[1] : hex.slice(2, 4), 16)
+        const b = parseInt(isShort ? hex[2] + hex[2] : hex.slice(4, 6), 16)
+        if ([r, g, b].some((n) => Number.isNaN(n))) return null
+        return { r, g, b }
+    }
+
+    const rgbMatch = value.match(/rgba?\(([^)]+)\)/i)
+    if (rgbMatch) {
+        const parts = rgbMatch[1].split(',').map((p) => Number(p.trim()))
+        if (parts.length < 3) return null
+        const [r, g, b] = parts
+        if ([r, g, b].some((n) => !Number.isFinite(n))) return null
+        return { r, g, b }
+    }
+
+    return null
+}
+
+const mixRgb = (a: Rgb, b: Rgb, t: number): Rgb => {
+    const tt = clamp01(t)
+    return {
+        r: Math.round(a.r + (b.r - a.r) * tt),
+        g: Math.round(a.g + (b.g - a.g) * tt),
+        b: Math.round(a.b + (b.b - a.b) * tt),
+    }
+}
+
 const getDeadlineMs = (task: Task) => {
     if (!task.deadline) return null
     const ms = new Date(task.deadline).getTime()
@@ -47,23 +90,32 @@ const overdueIncompleteRedAlpha = (task: Task) => {
 
     const elapsed = nowMs.value - deadlineMs
     const ratio = clamp01(elapsed / WINDOW_24H_MS)
-    const minAlpha = 0.05
-    const maxAlpha = 0.25
-    return minAlpha + (maxAlpha - minAlpha) * ratio
+    const minMix = 0.05
+    const maxMix = 0.25
+    return minMix + (maxMix - minMix) * ratio
 }
 
 const overdueTextStyle = (task: Task) => {
-    const alpha = overdueIncompleteRedAlpha(task)
-    if (alpha == null) return undefined
+    const mix = overdueIncompleteRedAlpha(task)
+    if (mix == null) return undefined
+
+    const base = baseTextRgb.value
+    if (!base) return undefined
+
+    const blended = mixRgb(base, DANGER_RED, mix)
     // Only text should be affected (not icons/background).
-    return { color: `rgba(220, 53, 69, ${alpha})` }
+    return { color: `rgb(${blended.r}, ${blended.g}, ${blended.b})` }
 }
 
 const isExpiredInvisibleClientSide = (task: Task) => {
     if (task.completed) {
         const completedAtMs = getCompletedAtMs(task)
-        if (completedAtMs == null) return false
-        return nowMs.value - completedAtMs >= WINDOW_24H_MS
+        if (completedAtMs != null) return nowMs.value - completedAtMs >= WINDOW_24H_MS
+
+        // Backward-compat: if we don't have completedAt yet, fall back to deadline.
+        const deadlineMs = getDeadlineMs(task)
+        if (deadlineMs == null) return false
+        return nowMs.value - deadlineMs >= WINDOW_24H_MS
     }
 
     const deadlineMs = getDeadlineMs(task)
@@ -74,9 +126,10 @@ const isExpiredInvisibleClientSide = (task: Task) => {
 const taskOpacity = (task: Task) => {
     if (!task.completed) return 1
     const completedAtMs = getCompletedAtMs(task)
-    if (completedAtMs == null) return 1
+    const startMs = completedAtMs ?? getDeadlineMs(task)
+    if (startMs == null) return 1
 
-    const elapsed = nowMs.value - completedAtMs
+    const elapsed = nowMs.value - startMs
     if (elapsed <= 0) return 1
 
     const ratio = clamp01(elapsed / WINDOW_24H_MS)
@@ -137,6 +190,10 @@ const fetchTasks = async () => {
 }
 
 onMounted(async () => {
+        const rootStyle = getComputedStyle(document.documentElement)
+        const cssVar = rootStyle.getPropertyValue('--color-text-primary').trim()
+        baseTextRgb.value = parseCssColorToRgb(cssVar) || parseCssColorToRgb(getComputedStyle(document.body).color)
+
     nowTimer = window.setInterval(() => {
       nowMs.value = Date.now()
     }, 60 * 1000)
@@ -345,10 +402,10 @@ const formatDate = (dateString?: string) => {
                                 :checked="task.completed" 
                                 @change="toggleTask(task)" 
                             />
-                            <div class="task-info" :style="overdueTextStyle(task)">
-                                <span>{{ task.title }}</span>
+                            <div class="task-info">
+                                <span :style="overdueTextStyle(task)">{{ task.title }}</span>
                                 <small v-if="task.deadline" class="task-deadline">
-                                    {{ formatDate(task.deadline) }}
+                                    <span :style="overdueTextStyle(task)">{{ formatDate(task.deadline) }}</span>
                                     <span v-if="task.isRecurring">↻</span>
                                 </small>
                             </div>
@@ -443,7 +500,7 @@ const formatDate = (dateString?: string) => {
      padding: 15px 20px;
      border-radius: 8px;
      border: 1px solid var(--color-text-primary);
-     transition: background-color 0.5s ease;
+     transition: background-color 0.3s ease, opacity 0.3s linear;
      display: flex;
      justify-content: space-between;
      align-items: center;
@@ -456,7 +513,7 @@ const formatDate = (dateString?: string) => {
       border-radius: 8px;
       border: 1px solid black;
       color: var(--color-text-secondary);
-      transition: background-color 0.5s ease;
+    transition: background-color 0.3s ease, opacity 0.3s linear;
       display: flex;
       justify-content: space-between;
       align-items: center;
