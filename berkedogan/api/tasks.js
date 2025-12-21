@@ -61,7 +61,8 @@ export default async function handler(req, res) {
             OR (
               completed = true
               AND "completedAt" IS NOT NULL
-              AND "completedAt" <= NOW() - INTERVAL '24 hours'
+              AND deadline IS NOT NULL
+              AND GREATEST(deadline, "completedAt") <= NOW() - INTERVAL '24 hours'
             )
           )
         RETURNING id
