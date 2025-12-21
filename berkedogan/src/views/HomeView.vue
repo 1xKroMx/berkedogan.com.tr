@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 import PasswordModal from '@/components/PasswordModal.vue'
-
-const router = useRouter()
 
 const secretPattern = ['HTML', 'CSS', 'JavaScript', 'Vue.js', 'TypeScript']
 

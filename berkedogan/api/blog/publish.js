@@ -152,7 +152,7 @@ export default async function handler(req, res) {
     if (hook) {
       try {
         await fetch(hook, { method: "POST" });
-      } catch (e) {
+      } catch {
         // Hook fail bile olsa commit başarılı; sadece bilgi dön.
         return res.status(200).json({
           success: true,

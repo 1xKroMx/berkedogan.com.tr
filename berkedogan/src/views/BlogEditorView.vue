@@ -51,7 +51,10 @@ const loadEntries = async () => {
     }
 
     entries.value = Array.isArray(data.entries)
-      ? data.entries.map((e: any) => ({ id: String(e.id), dateISO: String(e.dateISO) }))
+      ? data.entries.map((entry: unknown) => {
+          const e = (entry ?? {}) as Record<string, unknown>
+          return { id: String(e.id ?? ''), dateISO: String(e.dateISO ?? '') }
+        })
       : []
 
     if (!selectedId.value && entries.value.length > 0) {
@@ -155,7 +158,7 @@ const publish = async () => {
     }
     markdown.value = ''
     await loadEntries()
-  } catch (e) {
+  } catch {
     error.value = 'Sunucuya bağlanılamıyor.'
   } finally {
     isPublishing.value = false

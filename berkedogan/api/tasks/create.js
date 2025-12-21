@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { parse } from "cookie";
 
 import { getSql, logDbError } from "../_db.js";
+import { toIstanbulIsoString } from "../_time.js";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://www.berkedogan.com.tr");
@@ -55,7 +56,10 @@ export default async function handler(req, res) {
 
     return res.json({
       success: true,
-      task: rows[0],
+      task: {
+        ...rows[0],
+        completedAt: toIstanbulIsoString(rows[0].completedAt),
+      },
     });
 
   } catch (err) {

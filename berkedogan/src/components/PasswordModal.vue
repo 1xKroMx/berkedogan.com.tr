@@ -25,7 +25,7 @@ async function handlePasswordSubmit() {
     authMode.value = false
     router.push("/tasks")
 
-  } catch (e) {
+  } catch {
     error.value = "Sunucuya bağlanılamıyor"
   }
 }

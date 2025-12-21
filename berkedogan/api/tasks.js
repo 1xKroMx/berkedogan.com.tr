@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { parse } from "cookie";
 
 import { getSql, logDbError } from "./_db.js";
+import { toIstanbulIsoString } from "./_time.js";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "https://www.berkedogan.com.tr");
@@ -22,9 +23,8 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, error: "Missing token" });
   }
 
-  let decoded;
   try {
-    decoded = jwt.verify(token, process.env.JWT_SECRET);
+    jwt.verify(token, process.env.JWT_SECRET);
   } catch {
     return res.status(401).json({ success: false, error: "Invalid token" });
   }
@@ -38,7 +38,10 @@ export default async function handler(req, res) {
 
       return res.json({
         success: true,
-        tasks: rows,
+        tasks: rows.map((task) => ({
+          ...task,
+          completedAt: toIstanbulIsoString(task.completedAt),
+        })),
       });
     }
 
