@@ -112,12 +112,12 @@ const overdueTextStyle = (task: Task) => {
 const isExpiredInvisibleClientSide = (task: Task) => {
     if (task.completed) {
         const completedAtMs = getCompletedAtMs(task)
-                const deadlineMs = getDeadlineMs(task)
-                const startMs = completedAtMs != null && deadlineMs != null
-                    ? Math.max(completedAtMs, deadlineMs)
-                    : (completedAtMs ?? deadlineMs)
-                if (startMs == null) return false
-                return nowMs.value - startMs >= WINDOW_24H_MS
+        if (completedAtMs != null) return nowMs.value - completedAtMs >= WINDOW_24H_MS
+
+        // Backward-compat: if we don't have completedAt yet, fall back to deadline.
+        const deadlineMs = getDeadlineMs(task)
+        if (deadlineMs == null) return false
+        return nowMs.value - deadlineMs >= WINDOW_24H_MS
     }
 
     const deadlineMs = getDeadlineMs(task)
@@ -128,10 +128,7 @@ const isExpiredInvisibleClientSide = (task: Task) => {
 const taskOpacity = (task: Task) => {
     if (!task.completed) return 1
     const completedAtMs = getCompletedAtMs(task)
-        const deadlineMs = getDeadlineMs(task)
-        const startMs = completedAtMs != null && deadlineMs != null
-            ? Math.max(completedAtMs, deadlineMs)
-            : (completedAtMs ?? deadlineMs)
+    const startMs = completedAtMs ?? getDeadlineMs(task)
     if (startMs == null) return 1
 
     const elapsed = nowMs.value - startMs
