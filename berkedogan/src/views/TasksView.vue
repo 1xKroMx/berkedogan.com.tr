@@ -135,7 +135,8 @@ const taskOpacity = (task: Task) => {
     if (elapsed <= 0) return 1
 
     const ratio = clamp01(elapsed / WINDOW_24H_MS)
-    return Math.max(0, 1 - ratio)
+    const eased = Math.sqrt(ratio)
+    return Math.max(0, 1 - eased)
 }
 
 const sortedTasks = computed<Task[]>(() => {
