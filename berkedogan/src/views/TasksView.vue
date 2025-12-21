@@ -168,6 +168,21 @@ const toggleTask = async (task: Task) => {
     const wasOverdueIncomplete = !task.completed && deadlineMs != null && Date.now() > deadlineMs
     const wasInOverdueWindow = wasOverdueIncomplete && (Date.now() - deadlineMs!) < WINDOW_24H_MS
 
+    const previousCompleted = task.completed
+    const previousCompletedAt = task.completedAt
+    const isCompleting = !task.completed
+
+    // Optimistic UI update: don't wait for network.
+    task.completed = isCompleting
+    task.completedAt = isCompleting ? new Date().toISOString() : null
+
+    if (isCompleting && wasInOverdueWindow) {
+        highlightCompletedUntilMsById.value = {
+          ...highlightCompletedUntilMsById.value,
+          [task.id]: Date.now() + 900,
+        }
+    }
+
     try {
         const res = await fetch("https://www.berkedogan.com.tr/api/tasks/complete", {
             method: "POST",
@@ -182,20 +197,15 @@ const toggleTask = async (task: Task) => {
             if (index !== -1) {
                 tasks.value[index] = data.task
             }
-
-            if (wasInOverdueWindow && data.task?.completed) {
-                highlightCompletedUntilMsById.value = {
-                  ...highlightCompletedUntilMsById.value,
-                  [task.id]: Date.now() + 900,
-                }
-            }
         } else {
             // If failed
-            task.completed = !task.completed
+            task.completed = previousCompleted
+            task.completedAt = previousCompletedAt
             console.error("Toggle Error:", data.error)
         }
     } catch (err) {
-        task.completed = !task.completed
+        task.completed = previousCompleted
+        task.completedAt = previousCompletedAt
         console.error("Toggle Error:", err)
     }
 }
@@ -319,7 +329,7 @@ const formatDate = (dateString?: string) => {
         <div class="tasks">
                 <h3>~ Tasks ~</h3>
                 <div v-if="isLoading">Loading...</div>
-                <TransitionGroup v-else name="task-fade" tag="div">
+                                <TransitionGroup v-else name="task-fade" tag="div" class="tasks-list">
                     <div 
                         :class="[
                           task.completed ? 'task-completed' : 'task',
@@ -419,6 +429,12 @@ const formatDate = (dateString?: string) => {
     gap: 15px;
     margin-top: 1rem;
     margin-bottom: 1rem;
+ }
+
+ .tasks-list {
+     display: flex;
+     flex-direction: column;
+     gap: 15px;
  }
 
  .task {
