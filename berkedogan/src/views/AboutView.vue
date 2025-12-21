@@ -15,7 +15,7 @@
           <div class="intro-text">
             <h2 class="section-title">Who am I?</h2>
             <p class="intro-description">
-              I am a passionate <strong>Web Developer and freelancer</strong> with a strong focus on creating 
+              I am a passionate <strong>Frontend Developer and entrepreneur</strong> with a strong focus on creating 
               interactive and dynamic web applications. I specialize in building responsive, 
               user-friendly interfaces that provide exceptional user experiences.
             </p>
@@ -33,7 +33,7 @@
               </div>
               <div class="profile-info">
                 <h3 class="profile-name">Berke Doğan</h3>
-                <p class="profile-role">Full-Stack Web Developer</p>
+                <p class="profile-role">Frontend Web Developer</p>
                 <div class="profile-stats">
                   <div class="stat">
                     <span class="stat-number">5+</span>
