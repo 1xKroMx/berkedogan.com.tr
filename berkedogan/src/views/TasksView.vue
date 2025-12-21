@@ -7,11 +7,30 @@ interface Task {
   completed: boolean
   isRecurring?: boolean
   interval?: number
-  deadline?: string
+  deadline: string
 }
 
 const tasks = ref<Task[]>([])
 const isLoading = ref(false)
+
+const sortedTasks = computed<Task[]>(() => {
+  return [...tasks.value].sort((a, b) => {
+    const statusDiff = Number(a.completed) - Number(b.completed)
+    if (statusDiff !== 0) return statusDiff
+
+    const timeA = a.deadline
+      ? new Date(a.deadline).getTime()
+      : Infinity
+
+    const timeB = b.deadline
+      ? new Date(b.deadline).getTime()
+      : Infinity
+
+    return timeA - timeB
+  })
+})
+
+
 
 // Modal states
 const showAddModal = ref(false)
@@ -73,7 +92,7 @@ const toggleTask = async (task: Task) => {
                 tasks.value[index] = data.task
             }
         } else {
-            // Revert if failed
+            // If failed
             task.completed = !task.completed
             console.error("Toggle Error:", data.error)
         }
@@ -205,7 +224,7 @@ const formatDate = (dateString?: string) => {
                 <div 
                     v-else
                     :class="task.completed ? 'task-completed' : 'task'" 
-                    v-for="task in tasks" 
+                    v-for="task in sortedTasks" 
                     :key="task.id"
                 >
                     <div class="task-content">
