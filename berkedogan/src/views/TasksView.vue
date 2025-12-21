@@ -1,20 +1,92 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 interface Task {
   id: number
   title: string
   completed: boolean
+    completedAt?: string | null
   isRecurring?: boolean
   interval?: number
-  deadline: string
+    deadline?: string | null
 }
 
 const tasks = ref<Task[]>([])
 const isLoading = ref(false)
 
+const nowMs = ref(Date.now())
+let nowTimer: number | undefined
+
+const WINDOW_24H_MS = 24 * 60 * 60 * 1000
+
+const clamp01 = (value: number) => Math.max(0, Math.min(1, value))
+
+const getDeadlineMs = (task: Task) => {
+    if (!task.deadline) return null
+    const ms = new Date(task.deadline).getTime()
+    return Number.isFinite(ms) ? ms : null
+}
+
+const getCompletedAtMs = (task: Task) => {
+    if (!task.completedAt) return null
+    const ms = new Date(task.completedAt).getTime()
+    return Number.isFinite(ms) ? ms : null
+}
+
+const isOverdueIncomplete = (task: Task) => {
+    if (task.completed) return false
+    const deadlineMs = getDeadlineMs(task)
+    if (deadlineMs == null) return false
+    return nowMs.value > deadlineMs
+}
+
+const overdueIncompleteRedAlpha = (task: Task) => {
+    if (!isOverdueIncomplete(task)) return null
+    const deadlineMs = getDeadlineMs(task)
+    if (deadlineMs == null) return null
+
+    const elapsed = nowMs.value - deadlineMs
+    const ratio = clamp01(elapsed / WINDOW_24H_MS)
+    const minAlpha = 0.05
+    const maxAlpha = 0.25
+    return minAlpha + (maxAlpha - minAlpha) * ratio
+}
+
+const overdueTextStyle = (task: Task) => {
+    const alpha = overdueIncompleteRedAlpha(task)
+    if (alpha == null) return undefined
+    // Only text should be affected (not icons/background).
+    return { color: `rgba(220, 53, 69, ${alpha})` }
+}
+
+const isExpiredInvisibleClientSide = (task: Task) => {
+    if (task.completed) {
+        const completedAtMs = getCompletedAtMs(task)
+        if (completedAtMs == null) return false
+        return nowMs.value - completedAtMs >= WINDOW_24H_MS
+    }
+
+    const deadlineMs = getDeadlineMs(task)
+    if (deadlineMs == null) return false
+    return nowMs.value - deadlineMs >= WINDOW_24H_MS
+}
+
+const taskOpacity = (task: Task) => {
+    if (!task.completed) return 1
+    const completedAtMs = getCompletedAtMs(task)
+    if (completedAtMs == null) return 1
+
+    const elapsed = nowMs.value - completedAtMs
+    if (elapsed <= 0) return 1
+
+    const ratio = clamp01(elapsed / WINDOW_24H_MS)
+    return Math.max(0, 1 - ratio)
+}
+
 const sortedTasks = computed<Task[]>(() => {
-  return [...tasks.value].sort((a, b) => {
+    const visibleTasks = tasks.value.filter((task) => !isExpiredInvisibleClientSide(task))
+
+    return [...visibleTasks].sort((a, b) => {
     const statusDiff = Number(a.completed) - Number(b.completed)
     if (statusDiff !== 0) return statusDiff
 
@@ -65,6 +137,10 @@ const fetchTasks = async () => {
 }
 
 onMounted(async () => {
+    nowTimer = window.setInterval(() => {
+      nowMs.value = Date.now()
+    }, 60 * 1000)
+
     try {
         await fetch("https://www.berkedogan.com.tr/api/tasks/reset", {
             method: "POST",
@@ -76,7 +152,22 @@ onMounted(async () => {
     await fetchTasks()
 })
 
+onUnmounted(() => {
+    if (nowTimer) window.clearInterval(nowTimer)
+})
+
+const highlightCompletedUntilMsById = ref<Record<number, number>>({})
+
+const isHighlightedCompletion = (task: Task) => {
+    const until = highlightCompletedUntilMsById.value[task.id]
+    return Boolean(until && nowMs.value < until)
+}
+
 const toggleTask = async (task: Task) => {
+    const deadlineMs = getDeadlineMs(task)
+    const wasOverdueIncomplete = !task.completed && deadlineMs != null && Date.now() > deadlineMs
+    const wasInOverdueWindow = wasOverdueIncomplete && (Date.now() - deadlineMs!) < WINDOW_24H_MS
+
     try {
         const res = await fetch("https://www.berkedogan.com.tr/api/tasks/complete", {
             method: "POST",
@@ -90,6 +181,13 @@ const toggleTask = async (task: Task) => {
             const index = tasks.value.findIndex(t => t.id === task.id)
             if (index !== -1) {
                 tasks.value[index] = data.task
+            }
+
+            if (wasInOverdueWindow && data.task?.completed) {
+                highlightCompletedUntilMsById.value = {
+                  ...highlightCompletedUntilMsById.value,
+                  [task.id]: Date.now() + 900,
+                }
             }
         } else {
             // If failed
@@ -221,31 +319,36 @@ const formatDate = (dateString?: string) => {
         <div class="tasks">
                 <h3>~ Tasks ~</h3>
                 <div v-if="isLoading">Loading...</div>
-                <div 
-                    v-else
-                    :class="task.completed ? 'task-completed' : 'task'" 
-                    v-for="task in sortedTasks" 
-                    :key="task.id"
-                >
-                    <div class="task-content">
-                        <input 
-                            type="checkbox" 
-                            :checked="task.completed" 
-                            @change="toggleTask(task)" 
-                        />
-                        <div class="task-info">
-                            <span>{{ task.title }}</span>
-                            <small v-if="task.deadline" class="task-deadline">
-                                {{ formatDate(task.deadline) }}
-                                <span v-if="task.isRecurring">↻</span>
-                            </small>
+                <TransitionGroup v-else name="task-fade" tag="div">
+                    <div 
+                        :class="[
+                          task.completed ? 'task-completed' : 'task',
+                          isHighlightedCompletion(task) ? 'task-completed-highlight' : ''
+                        ]" 
+                        :style="{ opacity: taskOpacity(task) }"
+                        v-for="task in sortedTasks" 
+                        :key="task.id"
+                    >
+                        <div class="task-content">
+                            <input 
+                                type="checkbox" 
+                                :checked="task.completed" 
+                                @change="toggleTask(task)" 
+                            />
+                            <div class="task-info" :style="overdueTextStyle(task)">
+                                <span>{{ task.title }}</span>
+                                <small v-if="task.deadline" class="task-deadline">
+                                    {{ formatDate(task.deadline) }}
+                                    <span v-if="task.isRecurring">↻</span>
+                                </small>
+                            </div>
+                        </div>
+                        <div class="task-actions">
+                            <button class="btn-icon" @click="openEditModal(task)">✎</button>
+                            <button class="btn-icon btn-delete" @click="confirmDelete(task)">🗑</button>
                         </div>
                     </div>
-                    <div class="task-actions">
-                        <button class="btn-icon" @click="openEditModal(task)">✎</button>
-                        <button class="btn-icon btn-delete" @click="confirmDelete(task)">🗑</button>
-                    </div>
-                </div>
+                </TransitionGroup>
         </div>
 
         <!-- Modals -->
@@ -392,6 +495,35 @@ const formatDate = (dateString?: string) => {
 .task-actions {
     display: flex;
     gap: 5px;
+}
+
+.task-fade-enter-active,
+.task-fade-leave-active {
+    transition: opacity 500ms ease;
+}
+
+.task-fade-enter-from,
+.task-fade-leave-to {
+    opacity: 0;
+}
+
+.task-completed-highlight {
+    animation: completed-pop 220ms ease-out;
+}
+
+@keyframes completed-pop {
+    0% {
+        transform: scale(1);
+        filter: contrast(1);
+    }
+    60% {
+        transform: scale(1.015);
+        filter: contrast(1.15);
+    }
+    100% {
+        transform: scale(1);
+        filter: contrast(1);
+    }
 }
 
 .btn-icon {

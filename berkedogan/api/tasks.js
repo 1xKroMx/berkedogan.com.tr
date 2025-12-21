@@ -47,35 +47,27 @@ export default async function handler(req, res) {
 
     if (req.method === "POST" && action === "reset") {
       const sql = getSql();
-      const expiredTasks = await sql`
-        SELECT id, "isRecurring", "interval"
-        FROM tasks
-        WHERE deadline <= NOW() AND "isVisible" = true
+      const rows = await sql`
+        UPDATE tasks
+        SET "isVisible" = false
+        WHERE
+          "isVisible" = true
+          AND (
+            (
+              completed = false
+              AND deadline IS NOT NULL
+              AND deadline <= NOW() - INTERVAL '24 hours'
+            )
+            OR (
+              completed = true
+              AND "completedAt" IS NOT NULL
+              AND "completedAt" <= NOW() - INTERVAL '24 hours'
+            )
+          )
+        RETURNING id
       `;
 
-      let updates = 0;
-
-      for (const task of expiredTasks) {
-        if (task.isRecurring) {
-          const newDeadline = new Date();
-          newDeadline.setDate(newDeadline.getDate() + task.interval);
-
-          await sql`
-            UPDATE tasks
-            SET completed = false, "completedAt" = NULL, deadline = ${newDeadline.toISOString()}
-            WHERE id = ${task.id}
-          `;
-        } else {
-          await sql`
-            UPDATE tasks
-            SET "isVisible" = false
-            WHERE id = ${task.id}
-          `;
-        }
-        updates++;
-      }
-
-      return res.json({ success: true, updatesPerformed: updates });
+      return res.json({ success: true, updatesPerformed: rows.length });
     }
 
     return res
