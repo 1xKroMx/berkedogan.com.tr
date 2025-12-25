@@ -174,7 +174,7 @@ export default async function handler(req, res) {
 
     if (req.method === "POST" && action === "reset") {
       const sql = getSql();
-      const rows = await sql`
+      const hiddenRows = await sql`
         UPDATE tasks
         SET "isVisible" = false
         WHERE
@@ -197,7 +197,40 @@ export default async function handler(req, res) {
         RETURNING id
       `;
 
-      return res.json({ success: true, updatesPerformed: rows.length });
+      const resetRecurringRows = await sql`
+        UPDATE tasks
+        SET
+          completed = false,
+          "completedAt" = NULL,
+          "isVisible" = true,
+          deadline = CASE
+            WHEN "interval" IS NOT NULL AND "interval" > 0
+              THEN NOW() + ("interval" * INTERVAL '1 day')
+            ELSE NULL
+          END
+        WHERE
+          "isRecurring" = true
+          AND (
+            (
+              completed = false
+              AND deadline IS NOT NULL
+              AND deadline <= NOW() - INTERVAL '24 hours'
+            )
+            OR (
+              completed = true
+              AND "completedAt" IS NOT NULL
+              AND "completedAt" <= NOW() - INTERVAL '24 hours'
+            )
+          )
+        RETURNING id
+      `;
+
+      return res.json({
+        success: true,
+        updatesPerformed: hiddenRows.length + resetRecurringRows.length,
+        hiddenCount: hiddenRows.length,
+        recurringResetCount: resetRecurringRows.length,
+      });
     }
 
     return res
