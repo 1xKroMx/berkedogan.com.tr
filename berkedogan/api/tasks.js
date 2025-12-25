@@ -179,6 +179,7 @@ export default async function handler(req, res) {
         SET "isVisible" = false
         WHERE
           "isVisible" = true
+          AND "isRecurring" = false
           AND (
             (
               completed = false
