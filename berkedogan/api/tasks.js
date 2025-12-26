@@ -183,13 +183,11 @@ export default async function handler(req, res) {
           AND (
             (
               completed = false
-              isRecurring = false
               AND deadline IS NOT NULL
               AND deadline <= NOW() - INTERVAL '24 hours'
             )
             OR (
               completed = true
-              isRecurring = false
               AND "completedAt" IS NOT NULL
               AND "completedAt" <= NOW() - INTERVAL '24 hours'
             )
