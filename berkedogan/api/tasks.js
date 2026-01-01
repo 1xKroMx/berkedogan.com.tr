@@ -208,18 +208,8 @@ export default async function handler(req, res) {
           END
         WHERE
           "isRecurring" = true
-          AND (
-            (
-              completed = false
-              AND deadline IS NOT NULL
-              AND deadline <= NOW() - INTERVAL '24 hours'
-            )
-            OR (
-              completed = true
-              AND "completedAt" IS NOT NULL
-              AND "completedAt" <= NOW() - INTERVAL '24 hours'
-            )
-          )
+          AND deadline IS NOT NULL
+          AND deadline <= NOW()
         RETURNING id
       `;
 
