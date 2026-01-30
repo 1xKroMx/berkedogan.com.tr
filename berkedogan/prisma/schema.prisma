@@ -17,6 +17,8 @@ model Task {
   isRecurring Boolean   @default(false)
   interval    Int?      
   isVisible   Boolean   @default(true)
+  notifyEnabled Boolean @default(false)
+  notifyTime  String?
 
   @@map("tasks")
 }

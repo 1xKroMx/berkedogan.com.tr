@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     if (req.method === "GET" && !action) {
       const sql = getSql();
       const rows = await sql`
-        SELECT id, title, completed, "completedAt", "isRecurring", "interval", deadline FROM tasks WHERE "isVisible" = true ORDER BY id ASC
+        SELECT id, title, completed, "completedAt", "isRecurring", "interval", deadline, "notifyEnabled", "notifyTime" FROM tasks WHERE "isVisible" = true ORDER BY id ASC
       `;
 
       return res.json({
@@ -56,7 +56,7 @@ export default async function handler(req, res) {
         SET completed = NOT completed
           , "completedAt" = CASE WHEN NOT completed THEN NOW() ELSE NULL END
         WHERE id = ${id}
-        RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline, "isVisible"
+        RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline, "isVisible", "notifyEnabled", "notifyTime"
       `;
 
       if (rows.length === 0) {
@@ -73,7 +73,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "POST" && action === "create") {
-      const { title, isRecurring, interval } = req.body;
+      const { title, isRecurring, interval, notifyEnabled, notifyTime } = req.body;
 
       if (!title || !interval) {
         return res
@@ -94,9 +94,9 @@ export default async function handler(req, res) {
 
       const sql = getSql();
       const rows = await sql`
-        INSERT INTO tasks (title, completed, "isRecurring", "interval", deadline, "isVisible")
-        VALUES (${title}, false, ${isRecurring || false}, ${interval || null}, ${deadline}, true)
-        RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline, "isVisible"
+        INSERT INTO tasks (title, completed, "isRecurring", "interval", deadline, "isVisible", "notifyEnabled", "notifyTime")
+        VALUES (${title}, false, ${isRecurring || false}, ${interval || null}, ${deadline}, true, ${notifyEnabled || false}, ${notifyTime || null})
+        RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline, "isVisible", "notifyEnabled", "notifyTime"
       `;
 
       return res.json({
@@ -109,7 +109,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "POST" && action === "update") {
-      const { id, title, isRecurring, interval } = req.body;
+      const { id, title, isRecurring, interval, notifyEnabled, notifyTime } = req.body;
 
       if (!id || !title) {
         return res
@@ -131,9 +131,11 @@ export default async function handler(req, res) {
           title = ${title},
           "isRecurring" = ${isRecurring || false},
           "interval" = ${interval || null},
-          deadline = ${deadline}
+          deadline = ${deadline},
+          "notifyEnabled" = ${notifyEnabled || false},
+          "notifyTime" = ${notifyTime || null}
         WHERE id = ${id}
-        RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline
+        RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline, "notifyEnabled", "notifyTime"
       `;
 
       if (rows.length === 0) {
