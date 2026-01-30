@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import { parse } from "cookie";
+import webpush from "web-push";
 
 import { getSql, logDbError } from "../lib/db.js";
 import { setCors } from "../lib/cors.js";
@@ -13,6 +14,7 @@ function requireVapidEnv() {
   if (!publicKey || !privateKey) {
     throw new Error("Missing VAPID keys");
   }
+  webpush.setVapidDetails(subject, publicKey, privateKey);
   return { publicKey, privateKey, subject };
 }
 
@@ -92,6 +94,44 @@ export default async function handler(req, res) {
       `;
 
       return res.json({ success: true, id: rows[0]?.id });
+    }
+
+    if (req.method === "POST" && action === "test") {
+      requireVapidEnv();
+      const sql = getSql();
+      const rows = await sql`
+        SELECT id, endpoint, subscription
+        FROM push_subscriptions
+        WHERE "isActive" = true
+        ORDER BY "updatedAt" DESC
+        LIMIT 1
+      `;
+
+      const target = rows[0];
+      if (!target) {
+        return res.status(404).json({ success: false, error: "No active subscription" });
+      }
+
+      const payload = {
+        title: req.body?.title || "Hatırlatma",
+        body: req.body?.body || "Test bildirimi",
+        data: { url: req.body?.url || "/panel/tasks" },
+      };
+
+      try {
+        await webpush.sendNotification(target.subscription, JSON.stringify(payload));
+      } catch (err) {
+        if (err?.statusCode === 404 || err?.statusCode === 410) {
+          await sql`
+            UPDATE push_subscriptions
+            SET "isActive" = false, "updatedAt" = NOW()
+            WHERE id = ${target.id}
+          `;
+        }
+        throw err;
+      }
+
+      return res.json({ success: true });
     }
 
     return res.status(405).json({ success: false, error: "Method not allowed" });
