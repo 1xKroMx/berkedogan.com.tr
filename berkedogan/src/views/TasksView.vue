@@ -546,7 +546,7 @@ const formatDate = (dateString?: string) => {
 
                 <div v-if="newTaskNotifyEnabled" class="form-group">
                     <label>Bildirim Saati:</label>
-                    <input type="time" v-model="newTaskNotifyTime" />
+                    <input class="time-input" type="time" v-model="newTaskNotifyTime" />
                 </div>
 
                 <div class="modal-actions">
@@ -817,6 +817,13 @@ const formatDate = (dateString?: string) => {
     margin: 10px 0;
     border: 1px solid #ccc;
     border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.95rem;
+}
+
+.time-input {
+    font-size: 0.95rem;
+    font-variant-numeric: tabular-nums;
 }
 
 .form-group {
