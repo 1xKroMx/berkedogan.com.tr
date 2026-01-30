@@ -10,7 +10,7 @@ const authMode = ref(false)
 
 async function handlePasswordSubmit() {
   try {
-    const res = await fetch("https://www.berkedogan.com.tr/api/check", {
+      const res = await fetch("/api/check", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",

@@ -9,6 +9,8 @@ interface Task {
   isRecurring?: boolean
   interval?: number
     deadline?: string | null
+    notifyEnabled?: boolean
+    notifyTime?: string | null
 }
 
 const tasks = ref<Task[]>([])
@@ -170,13 +172,93 @@ const newTaskTitle = ref('')
 const newTaskInterval = ref<number | null>(null)
 const newTaskIsRecurring = ref(false)
 
+const newTaskNotifyEnabled = ref(false)
+const newTaskNotifyTime = ref<string>('09:00')
+
+const NOTIFY_OFF_SVG = `<svg xmlns="http://www.w3.org/2000/svg" height="48px" viewBox="0 -960 960 960" width="48px" fill="#666666"><path d="M160-200v-60h80v-304q0-84 49.5-150.5T420-798v-22q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v22q81 17 130.5 83.5T720-564v304h80v60H160Zm320-302Zm0 422q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM300-260h360v-304q0-75-52.5-127.5T480-744q-75 0-127.5 52.5T300-564v304Z"/></svg>`
+const NOTIFY_ON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" height="48px" viewBox="0 -960 960 960" width="48px" fill="#666666"><path d="M120-566q0-90 40-165t107-125l36 48q-56 42-89.5 104.5T180-566h-60Zm660 0q0-75-33.5-137.5T657-808l36-48q67 50 107 125t40 165h-60ZM160-200v-60h80v-304q0-84 49.5-150.5T420-798v-22q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v22q81 17 130.5 83.5T720-564v304h80v60H160Zm320-302Zm0 422q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM300-260h360v-304q0-75-52.5-127.5T480-744q-75 0-127.5 52.5T300-564v304Z"/></svg>`
+
+const urlBase64ToUint8Array = (base64String: string) => {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+    const rawData = window.atob(base64)
+    const outputArray = new Uint8Array(rawData.length)
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i)
+    }
+    return outputArray
+}
+
+const ensurePushSubscription = async () => {
+    if (!('serviceWorker' in navigator)) {
+        throw new Error('Service Worker desteklenmiyor')
+    }
+
+    const reg = await navigator.serviceWorker.register('/sw.js')
+    const ready = await navigator.serviceWorker.ready
+
+    const keyRes = await fetch('/api/push/key', {
+        credentials: 'include',
+    })
+    const keyData = await keyRes.json()
+    if (!keyData?.success || !keyData?.key) {
+        throw new Error('VAPID public key alınamadı')
+    }
+
+    let sub = await ready.pushManager.getSubscription()
+    if (!sub) {
+        sub = await ready.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(keyData.key),
+        })
+    }
+
+    await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ subscription: sub }),
+    })
+
+    return reg
+}
+
+const toggleNewTaskNotifications = async () => {
+    if (newTaskNotifyEnabled.value) {
+        newTaskNotifyEnabled.value = false
+        return
+    }
+
+    if (!('Notification' in window)) {
+        alert('Tarayıcı bildirimleri desteklemiyor.')
+        newTaskNotifyEnabled.value = false
+        return
+    }
+
+    const permission = await Notification.requestPermission()
+    if (permission !== 'granted') {
+        alert('Bildirim izni verilmedi. Bildirimler aktif edilemez.')
+        newTaskNotifyEnabled.value = false
+        return
+    }
+
+    try {
+        await ensurePushSubscription()
+        newTaskNotifyEnabled.value = true
+    } catch (e) {
+        console.error('Push subscription error', e)
+        alert('Bildirim kurulumu başarısız oldu.')
+        newTaskNotifyEnabled.value = false
+    }
+}
+
 const editingTask = ref<Task | null>(null)
 const taskToDelete = ref<Task | null>(null)
 
 const fetchTasks = async () => {
     isLoading.value = true
     try {
-        const res = await fetch("https://www.berkedogan.com.tr/api/tasks", {
+        const res = await fetch("/api/tasks", {
             credentials: "include"
         })
         const data = await res.json()
@@ -202,7 +284,7 @@ onMounted(async () => {
     }, 60 * 1000)
 
     try {
-        await fetch("https://www.berkedogan.com.tr/api/tasks/reset", {
+        await fetch("/api/tasks/reset", {
             method: "POST",
             credentials: "include"
         })
@@ -244,7 +326,7 @@ const toggleTask = async (task: Task) => {
     }
 
     try {
-        const res = await fetch("https://www.berkedogan.com.tr/api/tasks/complete", {
+        const res = await fetch("/api/tasks/complete", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
@@ -274,6 +356,8 @@ const openAddModal = () => {
     newTaskTitle.value = ''
     newTaskInterval.value = null
     newTaskIsRecurring.value = false
+    newTaskNotifyEnabled.value = false
+    newTaskNotifyTime.value = '09:00'
     showAddModal.value = true
 }
 
@@ -282,16 +366,23 @@ const addTask = async () => {
         alert("Please enter both title and duration (days).")
         return
     }
+
+    if (newTaskNotifyEnabled.value && !newTaskNotifyTime.value) {
+        alert('Lütfen bildirim saati seçin.')
+        return
+    }
     
     try {
-        const res = await fetch("https://www.berkedogan.com.tr/api/tasks/create", {
+        const res = await fetch("/api/tasks/create", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
             body: JSON.stringify({ 
                 title: newTaskTitle.value,
                 interval: newTaskInterval.value,
-                isRecurring: newTaskIsRecurring.value
+                isRecurring: newTaskIsRecurring.value,
+                notifyEnabled: newTaskNotifyEnabled.value,
+                notifyTime: newTaskNotifyEnabled.value ? newTaskNotifyTime.value : null,
             })
         })
         const data = await res.json()
@@ -301,6 +392,8 @@ const addTask = async () => {
             newTaskTitle.value = ''
             newTaskInterval.value = null
             newTaskIsRecurring.value = false
+            newTaskNotifyEnabled.value = false
+            newTaskNotifyTime.value = '09:00'
         } else {
             console.error("Add Error:", data.error)
         }
@@ -318,7 +411,7 @@ const updateTask = async () => {
     if (!editingTask.value || !editingTask.value.title.trim()) return
 
     try {
-        const res = await fetch("https://www.berkedogan.com.tr/api/tasks/update", {
+        const res = await fetch("/api/tasks/update", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
@@ -354,7 +447,7 @@ const deleteTask = async () => {
     if (!taskToDelete.value) return
 
     try {
-        const res = await fetch("https://www.berkedogan.com.tr/api/tasks/delete", {
+        const res = await fetch("/api/tasks/delete", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
@@ -424,7 +517,19 @@ const formatDate = (dateString?: string) => {
         <!-- Modals -->
         <div v-if="showAddModal" class="modal-overlay">
             <div class="modal">
-                <h3>Add New Task</h3>
+                <div class="modal-header">
+                    <h3>Add New Task</h3>
+                    <button
+                        class="notify-toggle"
+                        type="button"
+                        :class="{ 'notify-toggle--on': newTaskNotifyEnabled }"
+                        @click="toggleNewTaskNotifications"
+                        aria-label="Bildirimleri aç/kapat"
+                        title="Bildirim"
+                    >
+                        <span class="notify-toggle__icon" v-html="newTaskNotifyEnabled ? NOTIFY_ON_SVG : NOTIFY_OFF_SVG" />
+                    </button>
+                </div>
                 <input v-model="newTaskTitle" placeholder="Task title" @keyup.enter="addTask" />
                 
                 <div class="form-group">
@@ -437,6 +542,11 @@ const formatDate = (dateString?: string) => {
                         <input type="checkbox" v-model="newTaskIsRecurring" />
                         Döngüye al (Recurring)
                     </label>
+                </div>
+
+                <div v-if="newTaskNotifyEnabled" class="form-group">
+                    <label>Bildirim Saati:</label>
+                    <input type="time" v-model="newTaskNotifyTime" />
                 </div>
 
                 <div class="modal-actions">
@@ -639,6 +749,62 @@ const formatDate = (dateString?: string) => {
     border-radius: 8px;
     min-width: 300px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.notify-toggle {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: rgba(255, 255, 255, 0.9);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 180ms ease, background-color 200ms ease, box-shadow 200ms ease;
+}
+
+.notify-toggle:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+}
+
+.notify-toggle--on {
+    background: var(--color-primary);
+    border-color: rgba(0, 0, 0, 0.12);
+    animation: notify-pop 220ms ease-out;
+}
+
+.notify-toggle__icon {
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.notify-toggle__icon :deep(svg) {
+    width: 18px;
+    height: 18px;
+}
+
+@keyframes notify-pop {
+    0% {
+        transform: scale(0.98);
+    }
+    60% {
+        transform: scale(1.04);
+    }
+    100% {
+        transform: scale(1);
+    }
 }
 
 .modal h3 {

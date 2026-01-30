@@ -3,6 +3,8 @@ import { serialize } from "cookie";
 import { randomUUID } from "crypto";
 import jwt from "jsonwebtoken";
 
+import { setCors } from "../lib/cors.js";
+
 // In-memory session store (max 1000 concurrent sessions)
 const sessions = new Map();
 const MAX_SESSIONS = 1000;
@@ -45,10 +47,7 @@ function createSession() {
 }
 
 export default function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "https://www.berkedogan.com.tr");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "*");
-  res.setHeader("Access-Control-Allow-Credentials", "true");
+  setCors(req, res);
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();
@@ -57,6 +56,11 @@ export default function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ success: false });
   }
+
+  const origin = req.headers?.origin;
+  const isLocalDevOrigin =
+    origin === "http://localhost:5173" || origin === "http://127.0.0.1:5173";
+  const cookieSameSite = isLocalDevOrigin ? "none" : "lax";
 
   const { password } = req.body;
   const storedHash = process.env.VERCEL_PASSWORD_HASH;
@@ -83,14 +87,14 @@ export default function handler(req, res) {
     serialize('sessionId', sessionId, {
       httpOnly: true,
       secure: true,
-      sameSite: 'lax',
+      sameSite: cookieSameSite,
       maxAge: SESSION_EXPIRY_MS / 1000,
       path: '/'
     }),
     serialize('authToken', token, {
       httpOnly: true,
       secure: true,
-      sameSite: 'lax',
+      sameSite: cookieSameSite,
       maxAge: SESSION_EXPIRY_MS / 1000,
       path: '/'
     })

@@ -40,7 +40,7 @@ const prettySelectedDate = computed(() => {
 const loadEntries = async () => {
   isLoadingEntries.value = true
   try {
-    const res = await fetch('https://www.berkedogan.com.tr/api/blog/entries', {
+    const res = await fetch('/api/blog/entries', {
       credentials: 'include',
     })
     const data = await res.json().catch(() => null)
@@ -73,7 +73,7 @@ const loadEntry = async (id: string) => {
   if (!id) return
   isLoadingEntry.value = true
   try {
-    const url = new URL('https://www.berkedogan.com.tr/api/blog/get')
+    const url = new URL('/api/blog/get', window.location.origin)
     url.searchParams.set('id', id)
     const res = await fetch(url.toString(), { credentials: 'include' })
     const data = await res.json().catch(() => null)
@@ -126,7 +126,7 @@ const publish = async () => {
 
   isPublishing.value = true
   try {
-    const res = await fetch('https://www.berkedogan.com.tr/api/blog/publish', {
+    const res = await fetch('/api/blog/publish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -180,7 +180,7 @@ const update = async () => {
 
   isUpdating.value = true
   try {
-    const res = await fetch('https://www.berkedogan.com.tr/api/blog/update', {
+    const res = await fetch('/api/blog/update', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -229,7 +229,7 @@ const del = async () => {
 
   isDeleting.value = true
   try {
-    const res = await fetch('https://www.berkedogan.com.tr/api/blog/delete', {
+    const res = await fetch('/api/blog/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

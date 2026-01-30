@@ -1,13 +1,12 @@
 import { parse } from "cookie";
 import jwt from "jsonwebtoken";
 
+import { setCors } from "../lib/cors.js";
+
 const JWT_SECRET = process.env.JWT_SECRET || "default-dev-secret";
 
 export default function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "https://www.berkedogan.com.tr");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "*");
-  res.setHeader("Access-Control-Allow-Credentials", "true");
+  setCors(req, res);
 
   if (req.method === "OPTIONS") {
     return res.status(200).end();

@@ -91,11 +91,10 @@ router.beforeEach(async (to, from, next) => {
     // Dev/localhost bypass: allow access during local development without auth
     // This only triggers when running a dev build and accessing via localhost.
     const isDevBuild = import.meta.env.DEV === true;
-    const bypassEnabled = Boolean(import.meta.env.VITE_AUTH_BYPASS);
     const host = window.location.hostname;
     const isLocalHost = host === 'localhost' || host === '127.0.0.1' || host === '::1';
 
-    if (isDevBuild && bypassEnabled && isLocalHost) {
+    if (isDevBuild && isLocalHost) {
       console.log(`[Router] Dev/localhost detected, bypassing auth for ${to.path}`);
       next();
       return;
@@ -104,7 +103,7 @@ router.beforeEach(async (to, from, next) => {
     console.log(`[Router] Navigating to protected route: ${to.path}`);
     try {
       // Silent session check via /api/refresh endpoint
-      const refreshRes = await fetch("https://www.berkedogan.com.tr/api/refresh", {
+      const refreshRes = await fetch("/api/refresh", {
         method: "POST",
         credentials: "include",
       });
