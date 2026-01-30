@@ -801,6 +801,10 @@ const formatDate = (dateString?: string) => {
     animation: notify-pop 220ms ease-out;
 }
 
+.notify-toggle--on .notify-toggle__icon :deep(svg) {
+    fill: white;
+}
+
 .notify-toggle__icon {
     width: 20px;
     height: 20px;
@@ -843,6 +847,12 @@ const formatDate = (dateString?: string) => {
 .time-input {
     font-size: 0.95rem;
     font-variant-numeric: tabular-nums;
+}
+
+.time-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.1);
 }
 
 .form-group {
