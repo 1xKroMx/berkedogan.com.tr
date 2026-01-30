@@ -24,6 +24,14 @@
       "destination": "/api/tasks?action=reset"
     },
     {
+      "source": "/api/push/key",
+      "destination": "/api/push?action=key"
+    },
+    {
+      "source": "/api/push/subscribe",
+      "destination": "/api/push?action=subscribe"
+    },
+    {
       "source": "/api/blog/entries",
       "destination": "/api/blog?action=entries"
     },

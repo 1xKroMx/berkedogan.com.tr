@@ -27,3 +27,17 @@ model SystemState {
 
   @@map("system_state")
 }
+
+model PushSubscription {
+  id             Int      @id @default(autoincrement())
+  endpoint       String   @unique
+  subscription   Json
+  p256dh         String?
+  auth           String?
+  expirationTime DateTime?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now())
+
+  @@map("push_subscriptions")
+}
