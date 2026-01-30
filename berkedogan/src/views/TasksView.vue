@@ -419,7 +419,9 @@ const updateTask = async () => {
                 id: editingTask.value.id,
                 title: editingTask.value.title,
                 interval: editingTask.value.interval,
-                isRecurring: editingTask.value.isRecurring
+                isRecurring: editingTask.value.isRecurring,
+                notifyEnabled: editingTask.value.notifyEnabled,
+                notifyTime: editingTask.value.notifyEnabled ? editingTask.value.notifyTime : null,
             })
         })
         const data = await res.json()
@@ -558,7 +560,19 @@ const formatDate = (dateString?: string) => {
 
         <div v-if="showEditModal" class="modal-overlay">
             <div class="modal">
-                <h3>Edit Task</h3>
+                <div class="modal-header">
+                    <h3>Edit Task</h3>
+                    <button
+                        class="notify-toggle"
+                        type="button"
+                        :class="{ 'notify-toggle--on': editingTask?.notifyEnabled }"
+                        @click="editingTask && (editingTask.notifyEnabled = !editingTask.notifyEnabled)"
+                        aria-label="Bildirimleri aç/kapat"
+                        title="Bildirim"
+                    >
+                        <span class="notify-toggle__icon" v-html="editingTask?.notifyEnabled ? NOTIFY_ON_SVG : NOTIFY_OFF_SVG" />
+                    </button>
+                </div>
                 <input v-if="editingTask" v-model="editingTask.title" @keyup.enter="updateTask" />
                 
                 <div class="form-group" v-if="editingTask">
@@ -571,6 +585,11 @@ const formatDate = (dateString?: string) => {
                         <input type="checkbox" v-model="editingTask.isRecurring" />
                         Döngüye al (Recurring)
                     </label>
+                </div>
+
+                <div v-if="editingTask?.notifyEnabled" class="form-group">
+                    <label>Bildirim Saati:</label>
+                    <input class="time-input" type="time" v-model="editingTask.notifyTime" />
                 </div>
 
                 <div class="modal-actions">
