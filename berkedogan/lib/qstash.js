@@ -1,6 +1,9 @@
 import { getSql } from './db.js';
 
-const QSTASH_URL = process.env.QSTASH_URL || "https://qstash.upstash.io/v2/publish";
+const QSTASH_URL_RAW = process.env.QSTASH_URL || "https://qstash.upstash.io/v2/publish";
+const QSTASH_URL = QSTASH_URL_RAW.endsWith("/v2/publish")
+  ? QSTASH_URL_RAW
+  : `${QSTASH_URL_RAW.replace(/\/$/, "")}/v2/publish`;
 const QSTASH_TOKEN = process.env.QSTASH_TOKEN;
 // Always use production URL for callbacks
 const APP_URL = process.env.APP_URL || "https://www.berkedogan.com.tr";
