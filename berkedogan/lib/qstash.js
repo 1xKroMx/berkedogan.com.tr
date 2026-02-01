@@ -42,8 +42,16 @@ function getNextNotifyTimestamp(time, tasksDeadline) {
 }
 
 export async function scheduleTaskNotification(task) {
-  if (!QSTASH_TOKEN) return null;
-  if (!task.notifyEnabled || !task.notifyTime) return null;
+  console.log('[QStash] Attempting to schedule notification for task:', task.id, 'notifyTime:', task.notifyTime);
+  
+  if (!QSTASH_TOKEN) {
+    console.error('[QStash] QSTASH_TOKEN is not set in environment variables');
+    return null;
+  }
+  if (!task.notifyEnabled || !task.notifyTime) {
+    console.log('[QStash] Task notifications disabled or no time set');
+    return null;
+  }
 
   // If a message ID exists, cancel it first (just to be safe/clean)
   if (task.qstashMessageId) {
@@ -51,10 +59,17 @@ export async function scheduleTaskNotification(task) {
   }
 
   const notBefore = getNextNotifyTimestamp(task.notifyTime);
-  if (!notBefore) return null;
+  if (!notBefore) {
+    console.error('[QStash] Failed to calculate notification timestamp');
+    return null;
+  }
+  
+  console.log('[QStash] Scheduling for timestamp:', notBefore, 'which is', new Date(notBefore * 1000).toISOString());
 
   try {
     const destination = `${APP_URL}/api/push?action=trigger-task`;
+    
+    console.log('[QStash] Sending to QStash:', QSTASH_URL, 'destination:', destination);
     
     // QStash v2 publish endpoint: POST https://qstash.upstash.io/v2/publish/{destination}
     const res = await fetch(`${QSTASH_URL}/${encodeURIComponent(destination)}`, {
@@ -67,7 +82,16 @@ export async function scheduleTaskNotification(task) {
         body: JSON.stringify({ taskId: task.id })
     });
 
+    console.log('[QStash] Response status:', res.status);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('[QStash] API Error:', res.status, errorText);
+      return null;
+    }
+
     const data = await res.json();
+    console.log('[QStash] Response data:', data);
     
     if (data.messageId) {
        // Update DB with new messageId
@@ -77,10 +101,11 @@ export async function scheduleTaskNotification(task) {
          SET "qstashMessageId" = ${data.messageId}
          WHERE id = ${task.id}
        `;
+       console.log('[QStash] Successfully scheduled with messageId:', data.messageId);
        return data.messageId;
     }
   } catch (e) {
-    console.error("QStash Schedule Error", e);
+    console.error("[QStash] Schedule Error:", e);
   }
   return null;
 }
