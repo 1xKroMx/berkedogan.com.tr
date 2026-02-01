@@ -36,6 +36,10 @@
       "destination": "/api/push?action=test"
     },
     {
+      "source": "/api/push/notify",
+      "destination": "/api/push?action=notify"
+    },
+    {
       "source": "/api/blog/entries",
       "destination": "/api/blog?action=entries"
     },

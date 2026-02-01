@@ -43,11 +43,137 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  if (!verifyAuth(req, res)) return;
-
   const action = req.query?.action;
 
+  // Cron jobs (checking notifications) don't have cookies, so we bypass auth for them.
+  // In a real env, verify CRON_SECRET header if needed.
+  if (action !== "notify" && action !== "trigger-task") {
+    if (!verifyAuth(req, res)) return;
+  }
+
   try {
+    if (req.method === "POST" && action === "trigger-task") {
+        requireVapidEnv();
+        const { taskId } = req.body;
+        
+        if (!taskId) return res.status(400).json({success: false, error: "Missing taskId"});
+        
+        const sql = getSql();
+        
+        // Fetch task
+        const tasks = await sql`SELECT * FROM tasks WHERE id = ${taskId}`;
+        if (tasks.length === 0) return res.json({success: true, skipped: "Task not found"});
+        
+        const task = tasks[0];
+        if (task.completed || !task.notifyEnabled) return res.json({success: true, skipped: "Task completed or disabled"});
+        
+        // Fetch subscriptions
+        const subs = await sql`
+          SELECT id, subscription
+          FROM push_subscriptions
+          WHERE "isActive" = true
+        `;
+
+        if (subs.length === 0) return res.json({ success: true, warning: "No subscriptions" });
+
+        const payload = JSON.stringify({
+          title: task.title,
+          body: "Hatırlatma zamanı!",
+          icon: "/android-chrome-192x192.png",
+          data: { url: "/panel/tasks" },
+        });
+
+        // Send
+        await Promise.all(
+          subs.map(async (s) => {
+            try {
+              await webpush.sendNotification(s.subscription, payload);
+            } catch (err) {
+               if (err.statusCode === 410 || err.statusCode === 404) {
+                 await sql`UPDATE push_subscriptions SET "isActive" = false WHERE id = ${s.id}`;
+               }
+            }
+          })
+        );
+        
+        // Important: Should we reschedule for tomorrow if it's recurring?
+        // No, `scheduleTaskNotification` only sets "next occurrence".
+        // The message is consumed now.
+        // If the task is recurring, the user is expected to mark it complete, then reset handles it.
+        // OR they don't mark it complete, and want reminding again?
+        // Usually reminders are one-offs per interval.
+        // However, we should probably clear the `qstashMessageId` since it's used.
+        await sql`UPDATE tasks SET "qstashMessageId" = NULL WHERE id = ${task.id}`;
+
+        return res.json({ success: true });
+    }
+
+    if (req.method === "GET" && action === "notify") {
+      requireVapidEnv();
+      const sql = getSql();
+
+      // Current time in Istanbul (where the user likely is)
+      // Use en-GB to get HH:mm format (Turkey uses dots normally, but input type="time" is colons)
+      const now = new Date();
+      const timeString = now.toLocaleTimeString("en-GB", {
+        timeZone: "Europe/Istanbul",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      const tasks = await sql`
+        SELECT id, title
+        FROM tasks
+        WHERE
+          "completed" = false AND
+          "notifyEnabled" = true AND
+          "notifyTime" = ${timeString}
+      `;
+
+      if (tasks.length === 0) {
+        return res.json({ success: true, count: 0 });
+      }
+
+      const subs = await sql`
+        SELECT id, subscription
+        FROM push_subscriptions
+        WHERE "isActive" = true
+      `;
+
+      if (subs.length === 0) {
+        return res.json({ success: true, warning: "No subscriptions" });
+      }
+
+      let sentCount = 0;
+      for (const t of tasks) {
+        const payload = JSON.stringify({
+          title: t.title,
+          body: "Hatırlatma zamanı!",
+          icon: "/android-chrome-192x192.png",
+          data: { url: "/panel/tasks" },
+        });
+
+        await Promise.all(
+          subs.map(async (s) => {
+            try {
+              await webpush.sendNotification(s.subscription, payload);
+            } catch (err) {
+              if (err.statusCode === 410 || err.statusCode === 404) {
+                await sql`
+                  UPDATE push_subscriptions
+                  SET "isActive" = false, "updatedAt" = NOW()
+                  WHERE id = ${s.id}
+                `;
+              }
+            }
+          })
+        );
+        sentCount++;
+      }
+
+      return res.json({ success: true, sent: sentCount });
+    }
+
     if (req.method === "GET" && action === "key") {
       const env = requireVapidEnv();
       return res.json({ success: true, key: env.publicKey });

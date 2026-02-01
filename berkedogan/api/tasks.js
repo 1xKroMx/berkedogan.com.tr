@@ -4,6 +4,7 @@ import { parse } from "cookie";
 import { getSql, logDbError } from "../lib/db.js";
 import { toIstanbulIsoString } from "../lib/time.js";
 import { setCors } from "../lib/cors.js";
+import { scheduleTaskNotification, cancelTaskNotification } from "../lib/qstash.js";
 
 export default async function handler(req, res) {
   setCors(req, res);
@@ -56,18 +57,34 @@ export default async function handler(req, res) {
         SET completed = NOT completed
           , "completedAt" = CASE WHEN NOT completed THEN NOW() ELSE NULL END
         WHERE id = ${id}
-        RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline, "isVisible", "notifyEnabled", "notifyTime"
+        RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline, "isVisible", "notifyEnabled", "notifyTime", "qstashMessageId"
       `;
 
       if (rows.length === 0) {
         return res.status(404).json({ success: false, error: "Task not found" });
       }
 
+      const updatedTask = rows[0];
+      
+      // If completed, cancel pending notification.
+      // If uncompleted (completed=false), reschedule.
+      if (updatedTask.completed) {
+          if (updatedTask.qstashMessageId) {
+             await cancelTaskNotification(updatedTask.qstashMessageId);
+             // Clear the ID from DB
+             await sql`UPDATE tasks SET "qstashMessageId" = NULL WHERE id = ${updatedTask.id}`;
+             updatedTask.qstashMessageId = null;
+          }
+      } else {
+          // Task un-completed, schedule if needed
+          await scheduleTaskNotification(updatedTask);
+      }
+
       return res.json({
         success: true,
         task: {
-          ...rows[0],
-          completedAt: toIstanbulIsoString(rows[0].completedAt),
+          ...updatedTask,
+          completedAt: toIstanbulIsoString(updatedTask.completedAt),
         },
       });
     }
@@ -96,8 +113,13 @@ export default async function handler(req, res) {
       const rows = await sql`
         INSERT INTO tasks (title, completed, "isRecurring", "interval", deadline, "isVisible", "notifyEnabled", "notifyTime")
         VALUES (${title}, false, ${isRecurring || false}, ${interval || null}, ${deadline}, true, ${notifyEnabled || false}, ${notifyTime || null})
-        RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline, "isVisible", "notifyEnabled", "notifyTime"
+        RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline, "isVisible", "notifyEnabled", "notifyTime", "qstashMessageId"
       `;
+
+      // Schedule notification if enabled
+      if (rows[0]) {
+          await scheduleTaskNotification(rows[0]);
+      }
 
       return res.json({
         success: true,
@@ -135,11 +157,23 @@ export default async function handler(req, res) {
           "notifyEnabled" = ${notifyEnabled || false},
           "notifyTime" = ${notifyTime || null}
         WHERE id = ${id}
-        RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline, "notifyEnabled", "notifyTime"
+        RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline, "notifyEnabled", "notifyTime", "qstashMessageId"
       `;
 
       if (rows.length === 0) {
         return res.status(404).json({ success: false, error: "Task not found" });
+      }
+
+      // Schedule or cancel based on new state
+      const task = rows[0];
+      if (task.notifyEnabled && task.notifyTime) {
+          await scheduleTaskNotification(task);
+      } else {
+          // If notifications disabled or time removed, cancel existing
+          if (task.qstashMessageId) {
+             await cancelTaskNotification(task.qstashMessageId);
+             await sql`UPDATE tasks SET "qstashMessageId" = NULL WHERE id = ${task.id}`;
+          }
       }
 
       return res.json({
@@ -162,11 +196,15 @@ export default async function handler(req, res) {
       const rows = await sql`
         DELETE FROM tasks
         WHERE id = ${id}
-        RETURNING id
+        RETURNING id, "qstashMessageId"
       `;
 
       if (rows.length === 0) {
         return res.status(404).json({ success: false, error: "Task not found" });
+      }
+
+      if (rows[0].qstashMessageId) {
+          await cancelTaskNotification(rows[0].qstashMessageId);
       }
 
       return res.json({ success: true, id: rows[0].id });
@@ -210,8 +248,15 @@ export default async function handler(req, res) {
           "isRecurring" = true
           AND deadline IS NOT NULL
           AND deadline <= NOW()
-        RETURNING id
+        RETURNING id, "notifyEnabled", "notifyTime", "qstashMessageId"
       `;
+
+      // Reschedule notifications for reset recurring tasks
+      for (const t of resetRecurringRows) {
+          if (t.notifyEnabled) {
+              await scheduleTaskNotification(t);
+          }
+      }
 
       return res.json({
         success: true,
