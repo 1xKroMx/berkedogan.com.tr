@@ -2,7 +2,8 @@ import { getSql } from './db.js';
 
 const QSTASH_URL = process.env.QSTASH_URL || "https://qstash.upstash.io/v2/publish";
 const QSTASH_TOKEN = process.env.QSTASH_TOKEN;
-const APP_URL = process.env.APP_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://berkedogan.com.tr";
+// Always use production URL for callbacks
+const APP_URL = process.env.APP_URL || "https://www.berkedogan.com.tr";
 
 /**
  * Calculates the next Unix timestamp for the given HH:mm time in Istanbul.
