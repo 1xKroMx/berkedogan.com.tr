@@ -99,13 +99,18 @@ export async function scheduleTaskNotification(task) {
     console.log('[QStash] Response data:', data);
     
     if (data.messageId) {
-       // Update DB with new messageId
-       const sql = getSql();
-       await sql`
-         UPDATE tasks 
-         SET "qstashMessageId" = ${data.messageId}
-         WHERE id = ${task.id}
-       `;
+       // Update DB with new messageId (if column exists)
+       try {
+         const sql = getSql();
+         await sql`
+           UPDATE tasks 
+           SET "qstashMessageId" = ${data.messageId}
+           WHERE id = ${task.id}
+         `;
+       } catch (e) {
+         console.error('[QStash] Could not save qstashMessageId (column missing?)', e?.code || e?.message || e);
+       }
+
        console.log('[QStash] Successfully scheduled with messageId:', data.messageId);
        return data.messageId;
     }
