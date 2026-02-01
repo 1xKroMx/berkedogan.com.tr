@@ -73,10 +73,11 @@ export async function scheduleTaskNotification(task) {
   try {
     const destination = `${APP_URL}/api/push?action=trigger-task`;
     
-    console.log('[QStash] Sending to QStash:', QSTASH_URL, 'destination:', destination);
+    const publishUrl = `${QSTASH_URL}/${encodeURI(destination)}`;
+    console.log('[QStash] Sending to QStash:', QSTASH_URL, 'destination:', destination, 'publishUrl:', publishUrl);
     
     // QStash v2 publish endpoint: POST https://qstash.upstash.io/v2/publish/{destination}
-    const res = await fetch(`${QSTASH_URL}/${encodeURIComponent(destination)}`, {
+    const res = await fetch(publishUrl, {
         method: "POST",
         headers: {
             "Authorization": `Bearer ${QSTASH_TOKEN}`,
