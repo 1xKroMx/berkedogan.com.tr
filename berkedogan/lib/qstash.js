@@ -6,10 +6,18 @@ const APP_URL = process.env.APP_URL || process.env.VERCEL_URL ? `https://${proce
 
 /**
  * Calculates the next Unix timestamp for the given HH:mm time in Istanbul.
+ * If time is 'TEST', schedules for 30 seconds from now.
  */
 function getNextNotifyTimestamp(time, tasksDeadline) {
   if (!time) return null;
+  
+  // Test mode: schedule 30 seconds from now
+  if (time === 'TEST') {
+    return Math.floor(Date.now() / 1000) + 30;
+  }
+  
   const [hour, minute] = time.split(':').map(Number);
+  if (isNaN(hour) || isNaN(minute)) return null;
   
   // Create date in Istanbul time
   // Since JS Date is local or UTC, simple manipulation is tricky with timezone.

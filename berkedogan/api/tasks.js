@@ -248,13 +248,14 @@ export default async function handler(req, res) {
           "isRecurring" = true
           AND deadline IS NOT NULL
           AND deadline <= NOW()
-        RETURNING id, "notifyEnabled", "notifyTime", "qstashMessageId"
+        RETURNING id
       `;
 
       // Reschedule notifications for reset recurring tasks
-      for (const t of resetRecurringRows) {
-          if (t.notifyEnabled) {
-              await scheduleTaskNotification(t);
+      for (const row of resetRecurringRows) {
+          const tasks = await sql`SELECT * FROM tasks WHERE id = ${row.id}`;
+          if (tasks.length > 0 && tasks[0].notifyEnabled) {
+              await scheduleTaskNotification(tasks[0]);
           }
       }
 

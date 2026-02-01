@@ -252,14 +252,6 @@ const toggleNewTaskNotifications = async () => {
     }
 }
 
-const setNotifyTimeSoon = () => {
-    const now = new Date()
-    now.setMinutes(now.getMinutes() + 2)
-    const h = String(now.getHours()).padStart(2, '0')
-    const m = String(now.getMinutes()).padStart(2, '0')
-    newTaskNotifyTime.value = `${h}:${m}`
-}
-
 const editingTask = ref<Task | null>(null)
 const taskToDelete = ref<Task | null>(null)
 
@@ -556,12 +548,7 @@ const formatDate = (dateString?: string) => {
 
                 <div v-if="newTaskNotifyEnabled" class="form-group">
                     <label>Bildirim Saati:</label>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <input class="time-input" type="time" v-model="newTaskNotifyTime" />
-                        <button type="button" @click="setNotifyTimeSoon" style="padding: 4px 8px; font-size: 0.8rem; background: #eee; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;">
-                            +2 dk (Test)
-                        </button>
-                    </div>
+                    <input class="time-input" type="time" v-model="newTaskNotifyTime" />
                 </div>
 
                 <div class="modal-actions">
