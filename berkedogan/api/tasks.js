@@ -67,7 +67,7 @@ export default async function handler(req, res) {
         SET completed = NOT completed
           , "completedAt" = CASE WHEN NOT completed THEN NOW() ELSE NULL END
         WHERE id = ${id}
-        RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline, "isVisible", "notifyEnabled", "notifyTime", "qstashMessageId"
+        RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline, "isVisible", "notifyEnabled", "notifyTime"
       `;
 
       if (rows.length === 0) {
@@ -76,18 +76,34 @@ export default async function handler(req, res) {
 
       const updatedTask = rows[0];
       
+      // Try to fetch qstashMessageId separately (if column exists)
+      try {
+        const msgRows = await sql`SELECT "qstashMessageId" FROM tasks WHERE id = ${updatedTask.id}`;
+        if (msgRows[0]) updatedTask.qstashMessageId = msgRows[0].qstashMessageId;
+      } catch (e) {
+        // Column doesn't exist yet, skip
+      }
+      
       // If completed, cancel pending notification.
       // If uncompleted (completed=false), reschedule.
       if (updatedTask.completed) {
           if (updatedTask.qstashMessageId) {
-             await cancelTaskNotification(updatedTask.qstashMessageId);
-             // Clear the ID from DB
-             await sql`UPDATE tasks SET "qstashMessageId" = NULL WHERE id = ${updatedTask.id}`;
+             try {
+                await cancelTaskNotification(updatedTask.qstashMessageId);
+                // Clear the ID from DB
+                await sql`UPDATE tasks SET "qstashMessageId" = NULL WHERE id = ${updatedTask.id}`;
+             } catch (e) {
+                // Ignore if column doesn't exist
+             }
              updatedTask.qstashMessageId = null;
           }
       } else {
           // Task un-completed, schedule if needed
-          await scheduleTaskNotification(updatedTask);
+          try {
+              await scheduleTaskNotification(updatedTask);
+          } catch (e) {
+              console.error("Schedule error (non-fatal):", e);
+          }
       }
 
       return res.json({
@@ -123,7 +139,7 @@ export default async function handler(req, res) {
       const rows = await sql`
         INSERT INTO tasks (title, completed, "isRecurring", "interval", deadline, "isVisible", "notifyEnabled", "notifyTime")
         VALUES (${title}, false, ${isRecurring || false}, ${interval || null}, ${deadline}, true, ${notifyEnabled || false}, ${notifyTime || null})
-        RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline, "isVisible", "notifyEnabled", "notifyTime", "qstashMessageId"
+        RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline, "isVisible", "notifyEnabled", "notifyTime"
       `;
 
       // Schedule notification if enabled
@@ -171,7 +187,7 @@ export default async function handler(req, res) {
           "notifyEnabled" = ${notifyEnabled || false},
           "notifyTime" = ${notifyTime || null}
         WHERE id = ${id}
-        RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline, "notifyEnabled", "notifyTime", "qstashMessageId"
+        RETURNING id, title, completed, "completedAt", "isRecurring", "interval", deadline, "notifyEnabled", "notifyTime"
       `;
 
       if (rows.length === 0) {
@@ -180,13 +196,30 @@ export default async function handler(req, res) {
 
       // Schedule or cancel based on new state
       const task = rows[0];
+      
+      // Try to fetch qstashMessageId separately
+      try {
+        const msgRows = await sql`SELECT "qstashMessageId" FROM tasks WHERE id = ${task.id}`;
+        if (msgRows[0]) task.qstashMessageId = msgRows[0].qstashMessageId;
+      } catch (e) {
+        // Column doesn't exist yet
+      }
+      
       if (task.notifyEnabled && task.notifyTime) {
-          await scheduleTaskNotification(task);
+          try {
+              await scheduleTaskNotification(task);
+          } catch (e) {
+              console.error("Schedule error (non-fatal):", e);
+          }
       } else {
           // If notifications disabled or time removed, cancel existing
           if (task.qstashMessageId) {
-             await cancelTaskNotification(task.qstashMessageId);
-             await sql`UPDATE tasks SET "qstashMessageId" = NULL WHERE id = ${task.id}`;
+             try {
+                await cancelTaskNotification(task.qstashMessageId);
+                await sql`UPDATE tasks SET "qstashMessageId" = NULL WHERE id = ${task.id}`;
+             } catch (e) {
+                // Ignore if column doesn't exist
+             }
           }
       }
 
@@ -207,18 +240,32 @@ export default async function handler(req, res) {
       }
 
       const sql = getSql();
+      
+      // Try to get qstashMessageId before deleting
+      let qstashMessageId = null;
+      try {
+        const msgRows = await sql`SELECT "qstashMessageId" FROM tasks WHERE id = ${id}`;
+        if (msgRows[0]) qstashMessageId = msgRows[0].qstashMessageId;
+      } catch (e) {
+        // Column doesn't exist yet
+      }
+      
       const rows = await sql`
         DELETE FROM tasks
         WHERE id = ${id}
-        RETURNING id, "qstashMessageId"
+        RETURNING id
       `;
 
       if (rows.length === 0) {
         return res.status(404).json({ success: false, error: "Task not found" });
       }
 
-      if (rows[0].qstashMessageId) {
-          await cancelTaskNotification(rows[0].qstashMessageId);
+      if (qstashMessageId) {
+          try {
+              await cancelTaskNotification(qstashMessageId);
+          } catch (e) {
+              console.error("Cancel notification error (non-fatal):", e);
+          }
       }
 
       return res.json({ success: true, id: rows[0].id });
