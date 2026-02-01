@@ -174,6 +174,7 @@ const newTaskIsRecurring = ref(false)
 
 const newTaskNotifyEnabled = ref(false)
 const newTaskNotifyTime = ref<string>('09:00')
+const newTaskTestMode = ref(false)
 
 const NOTIFY_OFF_SVG = `<svg xmlns="http://www.w3.org/2000/svg" height="48px" viewBox="0 -960 960 960" width="48px" fill="#666666"><path d="M160-200v-60h80v-304q0-84 49.5-150.5T420-798v-22q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v22q81 17 130.5 83.5T720-564v304h80v60H160Zm320-302Zm0 422q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM300-260h360v-304q0-75-52.5-127.5T480-744q-75 0-127.5 52.5T300-564v304Z"/></svg>`
 const NOTIFY_ON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" height="48px" viewBox="0 -960 960 960" width="48px" fill="#666666"><path d="M120-566q0-90 40-165t107-125l36 48q-56 42-89.5 104.5T180-566h-60Zm660 0q0-75-33.5-137.5T657-808l36-48q67 50 107 125t40 165h-60ZM160-200v-60h80v-304q0-84 49.5-150.5T420-798v-22q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v22q81 17 130.5 83.5T720-564v304h80v60H160Zm320-302Zm0 422q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM300-260h360v-304q0-75-52.5-127.5T480-744q-75 0-127.5 52.5T300-564v304Z"/></svg>`
@@ -358,6 +359,7 @@ const openAddModal = () => {
     newTaskIsRecurring.value = false
     newTaskNotifyEnabled.value = false
     newTaskNotifyTime.value = '09:00'
+    newTaskTestMode.value = false
     showAddModal.value = true
 }
 
@@ -382,7 +384,7 @@ const addTask = async () => {
                 interval: newTaskInterval.value,
                 isRecurring: newTaskIsRecurring.value,
                 notifyEnabled: newTaskNotifyEnabled.value,
-                notifyTime: newTaskNotifyEnabled.value ? newTaskNotifyTime.value : null,
+                notifyTime: newTaskNotifyEnabled.value ? (newTaskTestMode.value ? 'TEST' : newTaskNotifyTime.value) : null,
             })
         })
         const data = await res.json()
@@ -394,6 +396,7 @@ const addTask = async () => {
             newTaskIsRecurring.value = false
             newTaskNotifyEnabled.value = false
             newTaskNotifyTime.value = '09:00'
+            newTaskTestMode.value = false
         } else {
             console.error("Add Error:", data.error)
         }
@@ -547,8 +550,16 @@ const formatDate = (dateString?: string) => {
                 </div>
 
                 <div v-if="newTaskNotifyEnabled" class="form-group">
-                    <label>Bildirim Saati:</label>
-                    <input class="time-input" type="time" v-model="newTaskNotifyTime" />
+                    <div class="form-group checkbox-group">
+                        <label>
+                            <input type="checkbox" v-model="newTaskTestMode" />
+                            Test Modu (30 saniye sonra)
+                        </label>
+                    </div>
+                    <div v-if="!newTaskTestMode">
+                        <label>Bildirim Saati:</label>
+                        <input class="time-input" type="time" v-model="newTaskNotifyTime" />
+                    </div>
                 </div>
 
                 <div class="modal-actions">
