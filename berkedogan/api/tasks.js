@@ -31,9 +31,19 @@ export default async function handler(req, res) {
   try {
     if (req.method === "GET" && !action) {
       const sql = getSql();
-      const rows = await sql`
-        SELECT id, title, completed, "completedAt", "isRecurring", "interval", deadline, "notifyEnabled", "notifyTime", "qstashMessageId" FROM tasks WHERE "isVisible" = true ORDER BY id ASC
-      `;
+      
+      // Try with qstashMessageId first, fallback if column doesn't exist yet
+      let rows;
+      try {
+        rows = await sql`
+          SELECT id, title, completed, "completedAt", "isRecurring", "interval", deadline, "notifyEnabled", "notifyTime", "qstashMessageId" FROM tasks WHERE "isVisible" = true ORDER BY id ASC
+        `;
+      } catch (e) {
+        // Column might not exist yet, try without it
+        rows = await sql`
+          SELECT id, title, completed, "completedAt", "isRecurring", "interval", deadline, "notifyEnabled", "notifyTime" FROM tasks WHERE "isVisible" = true ORDER BY id ASC
+        `;
+      }
 
       return res.json({
         success: true,
