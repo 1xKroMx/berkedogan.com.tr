@@ -56,23 +56,8 @@ export async function scheduleTaskNotification(task) {
   try {
     const destination = `${APP_URL}/api/push?action=trigger-task`;
     
-    const res = await fetch(destination, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${QSTASH_TOKEN}`,
-        "Upstash-Not-Before": String(notBefore),
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        taskId: task.id
-      })
-    });
-    
-    // NOTE: QStash v2 publish endpoint is actually:
-    // POST https://qstash.upstash.io/v2/publish/URL
-    // The previous fetch was wrong.
-    
-    const res2 = await fetch(`${QSTASH_URL}/${destination}`, {
+    // QStash v2 publish endpoint: POST https://qstash.upstash.io/v2/publish/{destination}
+    const res = await fetch(`${QSTASH_URL}/${encodeURIComponent(destination)}`, {
         method: "POST",
         headers: {
             "Authorization": `Bearer ${QSTASH_TOKEN}`,
@@ -82,7 +67,7 @@ export async function scheduleTaskNotification(task) {
         body: JSON.stringify({ taskId: task.id })
     });
 
-    const data = await res2.json();
+    const data = await res.json();
     
     if (data.messageId) {
        // Update DB with new messageId

@@ -32,7 +32,7 @@ export default async function handler(req, res) {
     if (req.method === "GET" && !action) {
       const sql = getSql();
       const rows = await sql`
-        SELECT id, title, completed, "completedAt", "isRecurring", "interval", deadline, "notifyEnabled", "notifyTime" FROM tasks WHERE "isVisible" = true ORDER BY id ASC
+        SELECT id, title, completed, "completedAt", "isRecurring", "interval", deadline, "notifyEnabled", "notifyTime", "qstashMessageId" FROM tasks WHERE "isVisible" = true ORDER BY id ASC
       `;
 
       return res.json({
@@ -118,7 +118,11 @@ export default async function handler(req, res) {
 
       // Schedule notification if enabled
       if (rows[0]) {
-          await scheduleTaskNotification(rows[0]);
+          try {
+              await scheduleTaskNotification(rows[0]);
+          } catch (e) {
+              console.error("Schedule notification error (non-fatal):", e);
+          }
       }
 
       return res.json({
