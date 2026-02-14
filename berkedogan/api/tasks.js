@@ -116,23 +116,34 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "POST" && action === "create") {
-      const { title, isRecurring, interval, notifyEnabled, notifyTime } = req.body;
+      const { title, isRecurring, interval, notifyEnabled, notifyTime, deadline: explicitDeadline } = req.body;
 
-      if (!title || !interval) {
+      if (!title) {
         return res
           .status(400)
-          .json({ success: false, error: "Missing title or duration" });
+          .json({ success: false, error: "Missing title" });
       }
 
       let deadline = null;
-      if (interval && interval > 0) {
+      // If explicit deadline is provided (e.g. from date picker), use it.
+      if (explicitDeadline) {
+          deadline = new Date(explicitDeadline).toISOString();
+      } 
+      // Fallback to interval based calculation if no explicit deadline but interval exists
+      else if (interval && interval > 0) {
         const date = new Date();
         date.setDate(date.getDate() + parseInt(interval));
         deadline = date.toISOString();
-      } else {
-        return res
-          .status(400)
-          .json({ success: false, error: "Duration must be greater than 0" });
+      }
+      
+      // Validation: recurring tasks need an interval
+      if (isRecurring && (!interval || interval <= 0)) {
+          return res.status(400).json({ success: false, error: "Recurring tasks require a valid interval" });
+      }
+      
+      // Validation: non-recurring tasks need either a deadline or interval
+      if (!isRecurring && !deadline && (!interval || interval <= 0)) {
+           return res.status(400).json({ success: false, error: "Task requires a duration or deadline" });
       }
 
       const sql = getSql();
@@ -150,16 +161,18 @@ export default async function handler(req, res) {
               console.error("Schedule notification error (non-fatal):", e);
           }
       }
+, deadline: explicitDeadline } = req.body;
 
-      return res.json({
-        success: true,
-        task: {
-          ...rows[0],
-          completedAt: toIstanbulIsoString(rows[0].completedAt),
-        },
-      });
-    }
+      if (!id || !title) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Missing id or title" });
+      }
 
+      let deadline = null;
+      if (explicitDeadline) {
+          deadline = new Date(explicitDeadline).toISOString();
+      } else
     if (req.method === "POST" && action === "update") {
       const { id, title, isRecurring, interval, notifyEnabled, notifyTime } = req.body;
 
