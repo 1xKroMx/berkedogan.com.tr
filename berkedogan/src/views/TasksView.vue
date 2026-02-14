@@ -9,6 +9,7 @@ interface Task {
   isRecurring?: boolean
   interval?: number
     deadline?: string | null
+    deadlineDate?: string // helper for edit form
     notifyEnabled?: boolean
     notifyTime?: string | null
 }
@@ -171,6 +172,7 @@ const showDeleteModal = ref(false)
 const newTaskTitle = ref('')
 const newTaskInterval = ref<number | null>(null)
 const newTaskIsRecurring = ref(false)
+const newTaskDeadlineDate = ref<string>('') // For date picker
 
 const newTaskNotifyEnabled = ref(false)
 const newTaskNotifyTime = ref<string>('09:00')
@@ -358,12 +360,43 @@ const openAddModal = () => {
     newTaskIsRecurring.value = false
     newTaskNotifyEnabled.value = false
     newTaskNotifyTime.value = '09:00'
+    
+    // Set default date to tomorrow for date picker usage
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    newTaskDeadlineDate.value = tomorrow.toISOString().split('T')[0]
+    
     showAddModal.value = true
 }
 
 const addTask = async () => {
-    if (!newTaskTitle.value.trim() || !newTaskInterval.value) {
-        alert("Please enter both title and duration (days).")
+    // If not recurring and notify enabled, calculate interval from date
+    if (!newTaskIsRecurring.value && newTaskNotifyEnabled.value) {
+        if (!newTaskDeadlineDate.value) {
+            alert("Lütfen bir tarih seçin.")
+            return
+        }
+        const targetDate = new Date(newTaskDeadlineDate.value)
+        const today = new Date()
+        // Reset hours to compare just dates roughly or allow exact day diff
+        targetDate.setHours(0,0,0,0)
+        today.setHours(0,0,0,0)
+        
+        const diffTime = targetDate.getTime() - today.getTime()
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        
+        if (diffDays < 0) {
+             alert("Geçmiş bir tarih seçemezsiniz.")
+             return
+        }
+        // If today is selected, maybe treat as 0 or 1? Backend usually adds interval to NOW. 
+        // If interval is 0, deadline is NOW. If interval is 1, deadline is tomorrow.
+        newTaskInterval.value = diffDays
+    }
+
+    if (!newTaskTitle.value.trim() || newTaskInterval.value === null) {
+        alert("Please enter title and valid duration/date.")
+            newTaskDeadlineDate.value = ''
         return
     }
 
@@ -404,11 +437,38 @@ const addTask = async () => {
 
 const openEditModal = (task: Task) => {
     editingTask.value = { ...task }
+    // Initialize deadline date from current deadline or interval
+    if (editingTask.value.deadline) {
+        editingTask.value.deadlineDate = editingTask.value.deadline.split('T')[0]
+    } else {
+         const tomorrow = new Date()
+         tomorrow.setDate(tomorrow.getDate() + (task.interval || 1))
+         editingTask.value.deadlineDate = tomorrow.toISOString().split('T')[0]
+    }
     showEditModal.value = true
 }
 
 const updateTask = async () => {
     if (!editingTask.value || !editingTask.value.title.trim()) return
+
+    // If not recurring + notify enabled, recalc interval from date
+    if (!editingTask.value.isRecurring && editingTask.value.notifyEnabled) {
+         if (!editingTask.value.deadlineDate) {
+             alert("Lütfen bir tarih seçin")
+             return
+         }
+         const targetDate = new Date(editingTask.value.deadlineDate)
+         const today = new Date()
+         targetDate.setHours(0,0,0,0)
+         today.setHours(0,0,0,0)
+         const diffDays = Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+         
+         if (diffDays < 0) {
+              alert("Geçmiş tarih seçilemez")
+              return
+         }
+         editingTask.value.interval = diffDays
+    }
 
     try {
         const res = await fetch("/api/tasks/update", {
@@ -533,30 +593,51 @@ const formatDate = (dateString?: string) => {
                     </button>
                 </div>
                 <input v-model="newTaskTitle" placeholder="Task title" @keyup.enter="addTask" />
-                
-                <div class="form-group">
-                    <label>Duration (Days):</label>
-                    <input type="number" v-model="newTaskInterval" placeholder="e.g. 1 for daily" min="1" />
-                </div>
-
-                <div class="form-group checkbox-group">
+                 checkbox-group">
                     <label>
                         <input type="checkbox" v-model="newTaskIsRecurring" />
                         Döngüye al (Recurring)
                     </label>
                 </div>
+                
+                <!-- Date picker for non-recurring + notify -->
+                <div class="form-group" v-if="!newTaskIsRecurring && newTaskNotifyEnabled">
+                    <label>Tarih:</label>
+                    <input type="date" v-model="newTaskDeadlineDate" />
+                </div>
+
+                <!-- Input for Recurring or No-Notify -->
+                <div class="form-group" v-else>
+                    <label v-if="newTaskIsRecurring && newTaskNotifyEnabled">
+                        Notify at every <span style="font-weight: bold; text-decoration: underline;">...</span> day
+                    </label>
+                    <label v-else>Duration (Days):</label>
+                    
+                    <input type="number" v-model="newTaskInterval" :placeholder="newTaskIsRecurring && newTaskNotifyEnabled ? 'Days interval' : 'e.g. 1 for daily'" min="1" /güye al (Recurring)
+                    </label>
+                </div>
 
                 <div v-if="newTaskNotifyEnabled" class="form-group">
-                    <label>Bildirim Saati:</label>
-                    <input class="time-input" type="time" v-model="newTaskNotifyTime" />
+                    <label>Bildirim Sa checkbox-group" v-if="editingTask">
+                    <label>
+                        <input type="checkbox" v-model="editingTask.isRecurring" />
+                        Döngüye al (Recurring)
+                    </label>
                 </div>
 
-                <div class="modal-actions">
-                    <button @click="showAddModal = false">Cancel</button>
-                    <button class="btn-primary" @click="addTask">Add</button>
+                <!-- Date picker for non-recurring + notify (Edit) -->
+                <div class="form-group" v-if="editingTask && !editingTask.isRecurring && editingTask.notifyEnabled">
+                    <label>Tarih:</label>
+                    <input type="date" v-model="editingTask.deadlineDate" />
                 </div>
-            </div>
-        </div>
+
+                <!-- Input for Recurring or No-Notify (Edit) -->
+                <div class="form-group" v-else-if="editingTask">
+                    <label v-if="editingTask.isRecurring && editingTask.notifyEnabled">
+                         Notify at every <span style="font-weight: bold; text-decoration: underline;">...</span> day
+                    </label>
+                    <label v-else>Duration (Days):</label>
+                    <input type="number" v-model="editingTask.interval" placeholder="e.g. 1 for daily" min="1" /
 
         <div v-if="showEditModal" class="modal-overlay">
             <div class="modal">
