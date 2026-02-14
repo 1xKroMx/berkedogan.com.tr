@@ -161,7 +161,18 @@ export default async function handler(req, res) {
               console.error("Schedule notification error (non-fatal):", e);
           }
       }
-, deadline: explicitDeadline } = req.body;
+
+      return res.json({
+        success: true,
+        task: {
+          ...rows[0],
+          completedAt: toIstanbulIsoString(rows[0].completedAt),
+        },
+      });
+    }
+
+    if (req.method === "POST" && action === "update") {
+      const { id, title, isRecurring, interval, notifyEnabled, notifyTime, deadline: explicitDeadline } = req.body;
 
       if (!id || !title) {
         return res
@@ -172,18 +183,7 @@ export default async function handler(req, res) {
       let deadline = null;
       if (explicitDeadline) {
           deadline = new Date(explicitDeadline).toISOString();
-      } else
-    if (req.method === "POST" && action === "update") {
-      const { id, title, isRecurring, interval, notifyEnabled, notifyTime } = req.body;
-
-      if (!id || !title) {
-        return res
-          .status(400)
-          .json({ success: false, error: "Missing id or title" });
-      }
-
-      let deadline = null;
-      if (interval && interval > 0) {
+      } else if (interval && interval > 0) {
         const date = new Date();
         date.setDate(date.getDate() + parseInt(interval));
         deadline = date.toISOString();
