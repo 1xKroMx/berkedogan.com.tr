@@ -13,6 +13,7 @@ interface Project {
 
 const projects = computed<Project[]>(() => [
   { id: 1, link: 'https://blog.berkedogan.com.tr', name: t.value.project1Name, description: 'blog.berkedogan.com.tr' },
+  { id: 2, link: 'https://gamingis.best', name: 'Gaming is Best', description: 'gamingis.best' },
 ]);
 </script>
 
@@ -23,7 +24,7 @@ const projects = computed<Project[]>(() => [
         <p class="page-subtitle">{{ t.projectsDescription }}</p>
      </header>
 
-        <section>
+        <section class="projects-list container">
           <a
             v-for="project in projects"
             :key="project.id"
@@ -64,6 +65,11 @@ const projects = computed<Project[]>(() => [
   margin: 0 auto;
 }
 
+.projects-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
 
 .project {
   text-decoration: none;
