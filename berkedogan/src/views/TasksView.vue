@@ -595,12 +595,15 @@ const formatDate = (dateString?: string) => {
 
                 <!-- Input for Recurring or No-Notify -->
                 <div class="form-group" v-else>
-                    <label v-if="newTaskIsRecurring && newTaskNotifyEnabled">
-                        Notify at every <span style="font-weight: bold; text-decoration: underline;">...</span> day
-                    </label>
-                    <label v-else>Duration (Days):</label>
-                    
-                    <input type="number" v-model="newTaskInterval" :placeholder="newTaskIsRecurring && newTaskNotifyEnabled ? 'Days interval' : 'e.g. 1 for daily'" min="1" />
+                    <div v-if="newTaskIsRecurring && newTaskNotifyEnabled" class="inline-form-row">
+                        <span>Notify at every</span>
+                        <input class="inline-number-input" type="number" v-model="newTaskInterval" placeholder="#" min="1" />
+                        <span>day</span>
+                    </div>
+                    <div v-else>
+                        <label>Duration (Days):</label>
+                        <input type="number" v-model="newTaskInterval" placeholder="e.g. 1 for daily" min="1" />
+                    </div>
                 </div>
 
                 <div v-if="newTaskNotifyEnabled" class="form-group">
@@ -642,13 +645,18 @@ const formatDate = (dateString?: string) => {
                 <!-- Date picker for non-recurring + notify (Edit) -->
                 <div class="form-group" v-if="editingTask && !editingTask.isRecurring && editingTask.notifyEnabled">
                     <label>Tarih:</label>
-                    <input type="date" v-model="editingTask.deadlineDate" />
-                </div>
 
                 <!-- Input for Recurring or No-Notify (Edit) -->
                 <div class="form-group" v-else-if="editingTask">
-                    <label v-if="editingTask.isRecurring && editingTask.notifyEnabled">
-                         Notify at every <span style="font-weight: bold; text-decoration: underline;">...</span> day
+                    <div v-if="editingTask.isRecurring && editingTask.notifyEnabled" class="inline-form-row">
+                         <span>Notify at every</span>
+                         <input class="inline-number-input" type="number" v-model="editingTask.interval" placeholder="#" min="1" />
+                         <span>day</span>
+                    </div>
+                    <div v-else>
+                        <label>Duration (Days):</label>
+                        <input type="number" v-model="editingTask.interval" placeholder="e.g. 1 for daily" min="1" />
+                    </div
                     </label>
                     <label v-else>Duration (Days):</label>
                     <input type="number" v-model="editingTask.interval" :placeholder="editingTask.isRecurring && editingTask.notifyEnabled ? 'Days interval' : 'e.g. 1 for daily'" min="1" />
@@ -965,6 +973,23 @@ const formatDate = (dateString?: string) => {
     border: none;
 }
 
+
+.inline-form-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    margin-top: 15px; 
+    margin-bottom: 15px;
+}
+
+.inline-number-input {
+    width: 60px !important;
+    min-width: 50px;
+    margin: 0 !important;
+    text-align: center;
+    padding: 6px !important;
+}
 .modal-actions .btn-danger {
     background: #dc3545;
     color: white;
