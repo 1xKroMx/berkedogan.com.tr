@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
 import { ref } from 'vue';
+import { useLanguage } from '@/composables/useLanguage';
+
+const { t, setLang, lang } = useLanguage();
 
 const route = useRoute();
 const isMenuOpen = ref(false);
@@ -51,7 +54,7 @@ const closeMenu = () => {
             :class="{ active: route.path === '/' }"
             @click="closeMenu"
           >
-            Home
+            {{ t.homeItem }}
           </router-link>
         </li>
         <li class="nav-item">
@@ -61,7 +64,7 @@ const closeMenu = () => {
             :class="{ active: route.path === '/about' }"
             @click="closeMenu"
           >
-            About Me
+            {{ t.aboutItem }}
           </router-link>
         </li>
         <li class="nav-item">
@@ -71,7 +74,7 @@ const closeMenu = () => {
             :class="{ active: route.path === '/contact' }"
             @click="closeMenu"
           >
-            Contact
+            {{ t.contactItem }}
           </router-link>
         </li>
         <li class="nav-item">
@@ -81,7 +84,7 @@ const closeMenu = () => {
             :class="{ active: route.path === '/projects' }"
             @click="closeMenu"
           >
-            Projects
+            {{ t.projectsItem }}
           </router-link>
         </li>
       </ul>

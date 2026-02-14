@@ -1,27 +1,28 @@
 <script setup lang="ts">
+import { ref } from 'vue';
+import { useLanguage } from '@/composables/useLanguage';
+
+const { t, lang } = useLanguage();
 </script>
 
 <template>
   <main class="about-page">
     <div class="container">
       <header class="page-header">
-        <h1 class="page-title">About Me</h1>
-        <p class="page-subtitle">Get to know more about my journey and expertise</p>
-        <blockquote class="page-motto">"What love builds, hate destroys; nothing is fixed, everything is earned."</blockquote>
+        <h1 class="page-title">{{ t.aboutItem }}</h1>
+        <p class="page-subtitle">{{ t.aboutMeSubtitle }}</p>
+        <blockquote v-if="lang === 'en'" class="page-motto">"What love builds, hate destroys; nothing is fixed, everything is earned."</blockquote>
       </header>
 
       <section class="intro-section">
         <div class="intro-content">
           <div class="intro-text">
-            <h2 class="section-title">Who am I?</h2>
+            <h2 class="section-title">{{ t.aboutMeSectionTitle }}</h2>
             <p class="intro-description">
-              I am a passionate <strong>Frontend Developer and entrepreneur</strong> with a strong focus on creating 
-              interactive and dynamic web applications. I specialize in building responsive, 
-              user-friendly interfaces that provide exceptional user experiences.
+              {{ t.aboutMeDescription }}
             </p>
             <p class="intro-description">
-              My journey in web development has equipped me with a diverse skill set in modern 
-              web technologies, allowing me to tackle complex challenges and deliver high-quality solutions.
+              {{ t.aboutMeIntroDescription }}
             </p>
           </div>
           <div class="intro-visual">
@@ -33,15 +34,15 @@
               </div>
               <div class="profile-info">
                 <h3 class="profile-name">Berke Doğan</h3>
-                <p class="profile-role">Frontend Web Developer</p>
+                <p class="profile-role">{{ t.heroSubtitle }}</p>
                 <div class="profile-stats">
                   <div class="stat">
                     <span class="stat-number">5+</span>
-                    <span class="stat-label">Technologies</span>
+                    <span class="stat-label">{{ t.profileStat1}}</span>
                   </div>
                   <div class="stat">
                     <span class="stat-number">∞</span>
-                    <span class="stat-label">Passion</span>
+                    <span class="stat-label">{{ t.profileStat2 }}</span>
                   </div>
                 </div>
               </div>
@@ -51,9 +52,9 @@
       </section>
 
       <section class="skills-section">
-        <h2 class="section-title text-center">Technologies & Skills</h2>
+        <h2 class="section-title text-center">{{ t.aboutMeSkillsSecTitle }}</h2>
         <p class="section-description text-center">
-          The languages and frameworks I use to build responsive and user-friendly interfaces
+          {{ t.aboutMeSkillsSecDescription }}
         </p>
         
         <div class="skills-grid">
@@ -76,7 +77,7 @@
           </div>
 
           <div class="skill-category">
-            <h3 class="category-title">Tools & Others</h3>
+            <h3 class="category-title">{{ t.otherSkillsCategory }}</h3>
             <div class="skills-list">
               <div class="skill-item" v-for="skill in otherSkills" :key="skill.name">
                 <div class="skill-icon" v-html="skill.icon"></div>
@@ -96,7 +97,7 @@
       </section>
 
       <section class="values-section">
-        <h2 class="section-title text-center">What I Value</h2>
+        <h2 class="section-title text-center">{{ t.aboutMeSec2Title }}</h2>
         <div class="values-grid">
           <div class="value-item">
             <div class="value-icon">
@@ -104,9 +105,9 @@
                 <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
             </div>
-            <h3 class="value-title">Quality Code</h3>
+            <h3 class="value-title">{{ t.aboutMeValue1 }}</h3>
             <p class="value-description">
-              Writing clean, maintainable, and efficient code that follows best practices and industry standards.
+              {{ t.aboutMeValue1Description }}
             </p>
           </div>
           <div class="value-item">
@@ -115,9 +116,9 @@
                 <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
               </svg>
             </div>
-            <h3 class="value-title">Performance</h3>
+            <h3 class="value-title">{{ t.aboutMeValue2 }}</h3>
             <p class="value-description">
-              Optimizing applications for speed and efficiency to deliver the best user experience possible.
+              {{ t.aboutMeValue2Description }}
             </p>
           </div>
           <div class="value-item">
@@ -128,9 +129,9 @@
                 <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
               </svg>
             </div>
-            <h3 class="value-title">User Experience</h3>
+            <h3 class="value-title">{{ t.aboutMeValue3 }}</h3>
             <p class="value-description">
-              Creating intuitive and accessible interfaces that users love to interact with.
+              {{ t.aboutMeValue3Description }}
             </p>
           </div>
         </div>

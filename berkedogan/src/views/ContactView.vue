@@ -1,23 +1,26 @@
 <script setup lang="ts">
+import { ref } from 'vue';
+import { useLanguage } from '@/composables/useLanguage';
+
+const { lang, t } = useLanguage();
 </script>
 
 <template>
   <main class="contact-page">
     <div class="container">
       <header class="page-header">
-        <h1 class="page-title">Contact Me</h1>
+        <h1 class="page-title">{{ t.contactItem }}</h1>
         <p class="page-subtitle">
-          Let's connect! I'm always excited to discuss new projects and opportunities.
+          {{ t.contactMeDescription }}
         </p>
       </header>
 
       <div class="contact-content">
         <section class="contact-info">
           <div class="info-card">
-            <h2 class="section-title">Get In Touch</h2>
+            <h2 class="section-title">{{ t.contactGetInTouch }}</h2>
             <p class="contact-description">
-              I'm currently available for freelance work and open to discussing new projects. 
-              Whether you have a question about my work or want to collaborate, I'd love to hear from you.
+              {{ t.contactDescription2 }}
             </p>
             
             <div class="contact-details">
@@ -29,8 +32,8 @@
                   </svg>
                 </div>
                 <div class="detail-content">
-                  <h3 class="detail-title">Location</h3>
-                  <p class="detail-text">Turkey</p>
+                  <h3 class="detail-title">{{ t.contactDetail1 }}</h3>
+                  <p class="detail-text">{{ t.contactDetail1Text }}</p>
                 </div>
               </div>
               
@@ -42,7 +45,7 @@
                   </svg>
                 </div>
                 <div class="detail-content">
-                  <h3 class="detail-title">Email</h3>
+                  <h3 class="detail-title">{{ t.contactDetail2 }}</h3>
                   <p class="detail-text">doganberke95@gmail.com</p>
                 </div>
               </div>
@@ -55,8 +58,8 @@
                   </svg>
                 </div>
                 <div class="detail-content">
-                  <h3 class="detail-title">Response Time</h3>
-                  <p class="detail-text">Usually within 24 hours</p>
+                  <h3 class="detail-title">{{ t.contactDetail3 }}</h3>
+                  <p class="detail-text">{{ t.contactDetail3Text }}</p>
                 </div>
               </div>
             </div>
@@ -64,7 +67,7 @@
         </section>
 
         <section class="contact-methods">
-          <h2 class="section-title">Connect With Me</h2>
+          <h2 class="section-title">{{ t.contactSecTitle}}</h2>
           <div class="contact-grid">
             <a 
               href="mailto:doganberke95@gmail.com" 
@@ -79,7 +82,7 @@
               </div>
               <div class="card-content">
                 <h3 class="card-title">Email</h3>
-                <p class="card-description">Send me a message directly</p>
+                <p class="card-description">{{ t.contactCardEmailDescription }}</p>
                 <span class="card-link">doganberke95@gmail.com</span>
               </div>
             </a>
@@ -98,8 +101,8 @@
               </div>
               <div class="card-content">
                 <h3 class="card-title">LinkedIn</h3>
-                <p class="card-description">Let's connect professionally</p>
-                <span class="card-link">View Profile</span>
+                <p class="card-description">{{ t.contactCardLinkedInDescription }}</p>
+                <span class="card-link">{{ t.contactCardLinkedInLink }}</span>
               </div>
             </a>
 
@@ -117,8 +120,8 @@
               </div>
               <div class="card-content">
                 <h3 class="card-title">GitHub</h3>
-                <p class="card-description">Check out my code</p>
-                <span class="card-link">View Repository</span>
+                <p class="card-description">{{ t.contactCardGitHubDescription }}</p>
+                <span class="card-link">{{ t.contactCardGitHubLink }}</span>
               </div>
             </a>
           </div>
@@ -126,7 +129,7 @@
           <div class="contact-footer">
             <p class="footer-text">
               <span class="emoji">✨</span>
-              If you have any questions or project ideas, feel free to reach out. I'm always excited to collaborate!
+              {{ t.contactFooterText }}
             </p>
           </div>
         </section>

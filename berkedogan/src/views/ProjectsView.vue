@@ -1,8 +1,26 @@
+<script setup lang="ts">
+import { ref, computed } from 'vue';
+import { useLanguage } from '@/composables/useLanguage';
+
+const { lang, t } = useLanguage();
+
+interface Project {
+  id: number;
+  link: string;
+  name: string;
+  description: string;
+}
+
+const projects = computed<Project[]>(() => [
+  { id: 1, link: 'https://blog.berkedogan.com.tr', name: t.value.project1Name, description: 'blog.berkedogan.com.tr' },
+]);
+</script>
+
 <template>
     <main class="projects-page">
      <header class="page-header">
-        <h1 class="page-title">Projects</h1>
-        <p class="page-subtitle">Explore some of the projects I've worked on:</p>
+        <h1 class="page-title">{{ t.projectsItem }}</h1>
+        <p class="page-subtitle">{{ t.projectsDescription }}</p>
      </header>
 
         <section>
@@ -15,24 +33,12 @@
             rel="noopener noreferrer"
           >
             <div>{{ project.name }}</div>
-            <div class="description">blog.berkedogan.com.tr</div>
+            <div class="description">{{ project.description }}</div>
           </a>
         </section>
     </main>
 </template>
-<script setup lang="ts">
-import { ref } from 'vue';
 
-interface Project {
-  id: number;
-  link: string;
-  name: string;
-}
-
-const projects = ref<Project[]>([
-  { id: 1, link: 'https://blog.berkedogan.com.tr', name: 'My Blog' },
-]);
-</script>
 <style scoped>
 .projects-page {
   min-height: 100vh;

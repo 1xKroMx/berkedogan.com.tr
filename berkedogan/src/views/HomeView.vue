@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import PasswordModal from '@/components/PasswordModal.vue'
+import { useLanguage } from '@/composables/useLanguage'
+
+const { t, lang } = useLanguage()
 
 const secretPattern = ['HTML', 'CSS', 'JavaScript', 'Vue.js', 'TypeScript']
 
@@ -77,20 +80,19 @@ const technologies = ref([
       <div class="hero-content">
         <div class="hero-text">
           <h1 class="hero-title">
-            Hi, I'm <span class="highlight">Berke Doğan</span>
+            {{ t.heroTitle }} <span class="highlight">Berke Doğan</span>
           </h1>
-          <h2 class="hero-subtitle">Frontend Web Developer</h2>
+          <h2 class="hero-subtitle">{{ t.heroSubtitle }}</h2>
           <p class="hero-description">
-            I create interactive and dynamic web applications with modern technologies. 
-            Passionate about building user-friendly interfaces and scalable solutions.
+           {{ t.heroDescription }}
           </p>
-          <blockquote class="hero-motto">"What love builds, hate destroys; nothing is fixed, everything is earned."</blockquote>
+          <blockquote v-if="lang === 'en'" class="hero-motto">"What love builds, hate destroys; nothing is fixed, everything is earned."</blockquote>
           <div class="hero-actions">
             <router-link to="/about" class="btn btn-primary">
-              Learn More About Me
+              {{ t.aboutMe }}
             </router-link>
             <router-link to="/contact" class="btn btn-secondary">
-              Get In Touch
+              {{ t.contactMe }}
             </router-link>
           </div>
         </div>
@@ -139,7 +141,7 @@ const technologies = ref([
 
     <section class="tech-stack-section">
       <div class="container">
-        <h3 class="section-title text-center">Technologies I Work With</h3>
+        <h3 class="section-title text-center">{{ t.technologiesTitle }}</h3>
         <div class="tech-grid">
           <div class="tech-item" v-for="tech in technologies" :key="tech.name">
             <div class="tech-icon" v-html="tech.icon"></div>
