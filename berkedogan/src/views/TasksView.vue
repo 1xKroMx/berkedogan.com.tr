@@ -69,6 +69,18 @@ const mixRgb = (a: Rgb, b: Rgb, t: number): Rgb => {
 
 const getDeadlineMs = (task: Task) => {
     if (!task.deadline) return null
+    
+    // If notify is enabled and time is set, use that time as the actual deadline for visual effects
+    if (task.notifyEnabled && task.notifyTime) {
+        const deadlineDate = new Date(task.deadline)
+        const [hours, minutes] = task.notifyTime.split(':').map(Number)
+        
+        // Set the time to the notify time
+        deadlineDate.setHours(hours, minutes, 0, 0)
+        const ms = deadlineDate.getTime()
+        return Number.isFinite(ms) ? ms : null
+    }
+    
     const ms = new Date(task.deadline).getTime()
     return Number.isFinite(ms) ? ms : null
 }
