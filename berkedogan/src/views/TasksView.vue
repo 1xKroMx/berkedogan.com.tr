@@ -645,6 +645,8 @@ const formatDate = (dateString?: string) => {
                 <!-- Date picker for non-recurring + notify (Edit) -->
                 <div class="form-group" v-if="editingTask && !editingTask.isRecurring && editingTask.notifyEnabled">
                     <label>Tarih:</label>
+                    <input type="date" v-model="editingTask.deadlineDate" />
+                </div>
 
                 <!-- Input for Recurring or No-Notify (Edit) -->
                 <div class="form-group" v-else-if="editingTask">
@@ -656,10 +658,7 @@ const formatDate = (dateString?: string) => {
                     <div v-else>
                         <label>Duration (Days):</label>
                         <input type="number" v-model="editingTask.interval" placeholder="e.g. 1 for daily" min="1" />
-                    </div
-                    </label>
-                    <label v-else>Duration (Days):</label>
-                    <input type="number" v-model="editingTask.interval" :placeholder="editingTask.isRecurring && editingTask.notifyEnabled ? 'Days interval' : 'e.g. 1 for daily'" min="1" />
+                    </div>
                 </div>
 
                 <div v-if="editingTask?.notifyEnabled" class="form-group">
