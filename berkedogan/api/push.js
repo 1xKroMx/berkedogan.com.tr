@@ -4,8 +4,18 @@ import webpush from "web-push";
 
 import { getSql, logDbError } from "../lib/db.js";
 import { setCors } from "../lib/cors.js";
+import { scheduleTaskNotification } from "../lib/qstash.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "default-dev-secret";
+const ISTANBUL_TZ = "Europe/Istanbul";
+
+const getIstanbulDateKey = (date) =>
+  new Intl.DateTimeFormat("en-CA", {
+    timeZone: ISTANBUL_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
 
 function requireVapidEnv() {
   const publicKey = process.env.VAPID_PUBLIC_KEY;
@@ -66,6 +76,18 @@ export default async function handler(req, res) {
         
         const task = tasks[0];
         if (task.completed || !task.notifyEnabled) return res.json({success: true, skipped: "Task completed or disabled"});
+
+        if (task.deadline) {
+          const deadline = new Date(task.deadline);
+          if (!Number.isNaN(deadline.getTime())) {
+            const todayKey = getIstanbulDateKey(new Date());
+            const deadlineKey = getIstanbulDateKey(deadline);
+            if (todayKey !== deadlineKey) {
+              await scheduleTaskNotification(task);
+              return res.json({ success: true, skipped: "Not due today" });
+            }
+          }
+        }
         
         // Fetch subscriptions
         const subs = await sql`
@@ -127,7 +149,9 @@ export default async function handler(req, res) {
         WHERE
           "completed" = false AND
           "notifyEnabled" = true AND
-          "notifyTime" = ${timeString}
+          "notifyTime" = ${timeString} AND
+          deadline IS NOT NULL AND
+          (deadline AT TIME ZONE 'Europe/Istanbul')::date = (NOW() AT TIME ZONE 'Europe/Istanbul')::date
       `;
 
       if (tasks.length === 0) {

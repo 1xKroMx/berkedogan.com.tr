@@ -8,40 +8,79 @@ const QSTASH_TOKEN = process.env.QSTASH_TOKEN;
 // Always use production URL for callbacks
 const APP_URL = process.env.APP_URL || "https://www.berkedogan.com.tr";
 
+const ISTANBUL_TZ = "Europe/Istanbul";
+
+const getIstanbulDateParts = (date) => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: ISTANBUL_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .formatToParts(date)
+    .reduce((acc, part) => {
+      if (part.type !== "literal") acc[part.type] = part.value;
+      return acc;
+    }, {});
+
+  return {
+    year: Number(parts.year),
+    month: Number(parts.month),
+    day: Number(parts.day),
+  };
+};
+
+const buildUtcDateFromIstanbulParts = (parts, hour, minute) => {
+  // Istanbul is UTC+3 year-round.
+  return new Date(Date.UTC(parts.year, parts.month - 1, parts.day, hour - 3, minute, 0, 0));
+};
+
 /**
  * Calculates the next Unix timestamp for the given HH:mm time in Istanbul.
+ * If a deadline exists, schedule exactly at that date/time.
  * If time is 'TEST', schedules for 30 seconds from now.
  */
-function getNextNotifyTimestamp(time, tasksDeadline) {
+function getNextNotifyTimestamp(time, task) {
   if (!time) return null;
-  
+
   // Test mode: schedule 30 seconds from now
-  if (time === 'TEST') {
+  if (time === "TEST") {
     return Math.floor(Date.now() / 1000) + 30;
   }
-  
-  const [hour, minute] = time.split(':').map(Number);
+
+  const [hour, minute] = time.split(":").map(Number);
   if (isNaN(hour) || isNaN(minute)) return null;
-  
-  // Create date in Istanbul time
-  // Since JS Date is local or UTC, simple manipulation is tricky with timezone.
-  // We'll use a simplified approach assuming the server environment (Vercel) time or relying on offsets.
-  // Ideally, use a library like 'date-fns-tz' but we might not have it.
-  // Let's assume we want to schedule it for the next occurrence.
-  
+
   const now = new Date();
-  // Adjust to Istanbul time (approximate if server is UTC)
-  // Istanbul is UTC+3.
-  const nowIstanbul = new Date(now.getTime() + (3 * 60 * 60 * 1000));
-  
-  let target = new Date(nowIstanbul);
-  target.setUTCHours(hour - 3, minute, 0, 0); // Convert back to UTC for the Date object
-  
-  if (target.getTime() <= now.getTime()) {
-      // If time passed today, schedule for tomorrow
-      target.setDate(target.getDate() + 1);
+
+  const deadline = task?.deadline ? new Date(task.deadline) : null;
+  if (deadline && !Number.isNaN(deadline.getTime())) {
+    const parts = getIstanbulDateParts(deadline);
+    let target = buildUtcDateFromIstanbulParts(parts, hour, minute);
+
+    if (target.getTime() <= now.getTime()) {
+      if (task?.isRecurring && task?.interval && task.interval > 0) {
+        const intervalMs = task.interval * 24 * 60 * 60 * 1000;
+        while (target.getTime() <= now.getTime()) {
+          target = new Date(target.getTime() + intervalMs);
+        }
+      } else {
+        return null;
+      }
+    }
+
+    return Math.floor(target.getTime() / 1000);
   }
-  
+
+  // Fallback: next occurrence of time today/tomorrow in Istanbul.
+  const nowIstanbul = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+  let target = new Date(nowIstanbul);
+  target.setUTCHours(hour - 3, minute, 0, 0);
+
+  if (target.getTime() <= now.getTime()) {
+    target.setDate(target.getDate() + 1);
+  }
+
   return Math.floor(target.getTime() / 1000);
 }
 
@@ -62,7 +101,7 @@ export async function scheduleTaskNotification(task) {
     await cancelTaskNotification(task.qstashMessageId);
   }
 
-  const notBefore = getNextNotifyTimestamp(task.notifyTime);
+  const notBefore = getNextNotifyTimestamp(task.notifyTime, task);
   if (!notBefore) {
     console.error('[QStash] Failed to calculate notification timestamp');
     return null;
