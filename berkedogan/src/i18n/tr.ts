@@ -45,4 +45,5 @@ export const tr: Translation = {
     projectsDescription: "Üzerinde çalıştığım bazı projeler:",
     project1Name: "Blogum",
     games: "Oyunlarım",
+    project3Name: "Test Labaratuvarım",
 }

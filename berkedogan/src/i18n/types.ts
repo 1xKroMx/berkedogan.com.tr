@@ -43,4 +43,5 @@ export type Translation = {
     projectsDescription: string;
     project1Name: string;
     games: string;
+    project3Name: string;
 }

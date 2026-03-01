@@ -50,11 +50,11 @@ const router = createRouter({
       }
     },
     {
-      path: '/games',
-      name: 'games',
+      path: '/lab',
+      name: 'My Test Lab',
       component: GamesView,
       meta: {
-        title: 'Games — Berke Doğan',
+        title: 'Lab — Berke Doğan',
       }
     },
     {

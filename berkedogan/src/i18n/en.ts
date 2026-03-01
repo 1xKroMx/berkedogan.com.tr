@@ -45,4 +45,5 @@ export const en: Translation = {
     projectsDescription: "Explore some of the projects I've worked on:",
     project1Name: "My Blog",
     games: "My Games",
+    project3Name: "My Test Lab",
 }
