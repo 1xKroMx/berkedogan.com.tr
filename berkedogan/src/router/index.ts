@@ -2,9 +2,11 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import AboutView from '@/views/AboutView.vue'
 import ContactView from '@/views/ContactView.vue'
+import ProjectsView from '@/views/ProjectsView.vue'
 import TasksView from '@/views/TasksView.vue'
 import PanelLayout from '@/layouts/PanelLayout.vue'
 import BlogEditorView from '@/views/BlogEditorView.vue'
+import GamesView from '@/views/GamesView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -42,9 +44,17 @@ const router = createRouter({
     {
       path: '/projects',
       name: 'projects',
-      component: () => import('@/views/ProjectsView.vue'),
+      component: ProjectsView,
       meta: {
         title: 'Projects — Berke Doğan',
+      }
+    },
+    {
+      path: '/games',
+      name: 'games',
+      component: GamesView,
+      meta: {
+        title: 'Games — Berke Doğan',
       }
     },
     {

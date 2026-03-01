@@ -44,4 +44,5 @@ export const en: Translation = {
     contactFooterText: "If you have any questions or project ideas, feel free to reach out. I'm always excited to collaborate!",
     projectsDescription: "Explore some of the projects I've worked on:",
     project1Name: "My Blog",
+    games: "My Games",
 }
