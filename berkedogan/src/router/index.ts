@@ -6,7 +6,7 @@ import ProjectsView from '@/views/ProjectsView.vue'
 import TasksView from '@/views/TasksView.vue'
 import PanelLayout from '@/layouts/PanelLayout.vue'
 import BlogEditorView from '@/views/BlogEditorView.vue'
-import GamesView from '@/views/GamesView.vue'
+import LabView from '@/views/LabView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -52,7 +52,7 @@ const router = createRouter({
     {
       path: '/lab',
       name: 'My Test Lab',
-      component: GamesView,
+      component: LabView,
       meta: {
         title: 'Lab — Berke Doğan',
       }

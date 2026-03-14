@@ -5,6 +5,6 @@ const { t, lang } = useLanguage();
 
 <template>
      <div>
-        <h1>{{ t.games }}</h1>
+        <h1>{{ t.lab}}</h1>
      </div>
 </template>

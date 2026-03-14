@@ -44,6 +44,6 @@ export const tr: Translation = {
     contactFooterText: "Herhangi bir sorunuz veya proje fikriniz varsa, lütfen iletişime geçmekten çekinmeyin. İşbirliği yapmaktan memnun olurum!",
     projectsDescription: "Üzerinde çalıştığım bazı projeler:",
     project1Name: "Blogum",
-    games: "Oyunlarım",
+    lab: "Oyunlarım",
     project3Name: "Test Labaratuvarım",
 }

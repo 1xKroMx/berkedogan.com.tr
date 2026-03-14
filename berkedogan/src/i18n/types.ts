@@ -42,6 +42,6 @@ export type Translation = {
     contactFooterText: string;
     projectsDescription: string;
     project1Name: string;
-    games: string;
+    lab: string;
     project3Name: string;
 }
