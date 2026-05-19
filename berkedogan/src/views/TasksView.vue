@@ -371,7 +371,6 @@ const sendTestNotification = async () => {
 
 const editingTask = ref<Task | null>(null)
 const taskToDelete = ref<Task | null>(null)
-const snoozingById = ref<Record<number, boolean>>({})
 
 const fetchTasks = async () => {
     isLoading.value = true
@@ -467,39 +466,6 @@ const toggleTask = async (task: Task) => {
         task.completed = previousCompleted
         task.completedAt = previousCompletedAt
         console.error("Toggle Error:", err)
-    }
-}
-
-const snoozeTask = async (task: Task) => {
-    if (!task?.id) return
-    if (snoozingById.value[task.id]) return
-    snoozingById.value = { ...snoozingById.value, [task.id]: true }
-
-    try {
-        const res = await fetch(withDevFlag('/api/push?action=snooze'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ taskId: task.id, days: 1 }),
-        })
-        const data = await res.json()
-        if (res.ok && data.success) {
-            // Update local task with server response
-            const index = tasks.value.findIndex((t) => t.id === task.id)
-            if (index !== -1) tasks.value[index] = data.task
-            else {
-                // If not found, refresh list
-                await fetchTasks()
-            }
-        } else {
-            console.error('Snooze error', data?.error)
-            alert('Erteleme yapılamadı: ' + (data?.error || 'Sunucu hatası'))
-        }
-    } catch (e) {
-        console.error('Snooze request failed', e)
-        alert('Erteleme isteği başarısız oldu.')
-    } finally {
-        snoozingById.value = { ...snoozingById.value, [task.id]: false }
     }
 }
 
@@ -710,14 +676,6 @@ const formatDate = (dateString?: string) => {
                         </div>
                         <div class="task-actions">
                             <button class="btn-icon" @click="openEditModal(task)">✎</button>
-                            <button
-                                class="btn-icon"
-                                :title="'Ertele 1 gün'"
-                                @click="snoozeTask(task)"
-                                :disabled="snoozingById[task.id]"
-                            >
-                                ⏰
-                            </button>
                             <button class="btn-icon btn-delete" @click="confirmDelete(task)">🗑</button>
                         </div>
                     </div>
