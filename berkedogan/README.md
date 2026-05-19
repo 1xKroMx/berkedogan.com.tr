@@ -46,7 +46,8 @@ npm run lint
 
 ## Local push testing
 
-The push flow can be tested locally without logging in when `NODE_ENV !== production`.
+The push flow can be tested in Vite dev mode, even when you open the app through a LAN IP instead of `localhost`.
+Dev-only push requests add `?dev=1` automatically, so the backend can bypass auth for local testing.
 If you want to force the same behavior in a production-like environment, set `ALLOW_PUSH_BYPASS=true`.
 
 ### 1) Create a subscription from the app

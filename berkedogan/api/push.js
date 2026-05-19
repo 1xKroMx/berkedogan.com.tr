@@ -70,7 +70,7 @@ export default async function handler(req, res) {
 
   const action = req.query?.action;
 
-  const allowLocalPushFlow = process.env.ALLOW_PUSH_BYPASS === 'true' || isLocalDevRequest(req);
+  const allowLocalPushFlow = process.env.ALLOW_PUSH_BYPASS === 'true' || req.query?.dev === '1' || isLocalDevRequest(req);
 
   // Cron jobs (checking notifications) and push-triggered actions don't have cookies, so we bypass auth for them.
   // In a real env, verify CRON_SECRET or use signed requests if needed.
