@@ -57,6 +57,8 @@ Open the app locally, go to the Tasks page, and enable notifications. The local 
 - `GET /api/push?action=key`
 - `POST /api/push?action=subscribe`
 
+Important: browser notification permission and service workers require a secure context. `localhost` is allowed, but opening the app over plain `http://192.168.x.x` will block notification permission in most browsers.
+
 ### 2) Send a direct test notification
 
 You can send a notification directly to one subscription or to all active subscriptions.

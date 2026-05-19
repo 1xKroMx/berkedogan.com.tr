@@ -190,7 +190,6 @@ const newTaskNotifyEnabled = ref(false)
 const newTaskNotifyTime = ref<string>('09:00')
 const isSendingTestNotification = ref(false)
 const isDevMode = import.meta.env.DEV
-const isLocalHost = isDevMode && ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)
 
 const withDevFlag = (url: string) => {
     if (!isDevMode) return url
@@ -290,6 +289,12 @@ const toggleNewTaskNotifications = async () => {
         return
     }
 
+    if (!window.isSecureContext) {
+        alert('Bildirim izni için HTTPS veya localhost gerekir. LAN IP üzerinden HTTP ile bu tarayıcıda izin verilemez.')
+        newTaskNotifyEnabled.value = false
+        return
+    }
+
     const permission = await Notification.requestPermission()
     if (permission !== 'granted') {
         alert('Bildirim izni verilmedi. Bildirimler aktif edilemez.')
@@ -316,6 +321,11 @@ const sendTestNotification = async () => {
 
     if (!('Notification' in window)) {
         alert('Tarayıcı bildirimleri desteklemiyor.')
+        return
+    }
+
+    if (!window.isSecureContext) {
+        alert('Test bildirimi için HTTPS veya localhost gerekir. LAN IP üzerinden HTTP ile bildirim izni alınamaz.')
         return
     }
 
@@ -361,6 +371,7 @@ const sendTestNotification = async () => {
 
 const editingTask = ref<Task | null>(null)
 const taskToDelete = ref<Task | null>(null)
+const snoozingById = ref<Record<number, boolean>>({})
 
 const fetchTasks = async () => {
     isLoading.value = true
@@ -456,6 +467,39 @@ const toggleTask = async (task: Task) => {
         task.completed = previousCompleted
         task.completedAt = previousCompletedAt
         console.error("Toggle Error:", err)
+    }
+}
+
+const snoozeTask = async (task: Task) => {
+    if (!task?.id) return
+    if (snoozingById.value[task.id]) return
+    snoozingById.value = { ...snoozingById.value, [task.id]: true }
+
+    try {
+        const res = await fetch(withDevFlag('/api/push?action=snooze'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ taskId: task.id, days: 1 }),
+        })
+        const data = await res.json()
+        if (res.ok && data.success) {
+            // Update local task with server response
+            const index = tasks.value.findIndex((t) => t.id === task.id)
+            if (index !== -1) tasks.value[index] = data.task
+            else {
+                // If not found, refresh list
+                await fetchTasks()
+            }
+        } else {
+            console.error('Snooze error', data?.error)
+            alert('Erteleme yapılamadı: ' + (data?.error || 'Sunucu hatası'))
+        }
+    } catch (e) {
+        console.error('Snooze request failed', e)
+        alert('Erteleme isteği başarısız oldu.')
+    } finally {
+        snoozingById.value = { ...snoozingById.value, [task.id]: false }
     }
 }
 
@@ -630,7 +674,7 @@ const formatDate = (dateString?: string) => {
         <div class="header">
             <h1>Tasks View</h1>
             <div class="header-actions">
-                <button v-if="isLocalHost" class="btn-secondary" :disabled="isSendingTestNotification" @click="sendTestNotification">
+                <button v-if="isDevMode" class="btn-secondary" :disabled="isSendingTestNotification" @click="sendTestNotification">
                     {{ isSendingTestNotification ? 'Sending...' : 'Test Bildirimi' }}
                 </button>
                 <button class="btn-add" @click="openAddModal">+ Add Task</button>
@@ -666,6 +710,14 @@ const formatDate = (dateString?: string) => {
                         </div>
                         <div class="task-actions">
                             <button class="btn-icon" @click="openEditModal(task)">✎</button>
+                            <button
+                                class="btn-icon"
+                                :title="'Ertele 1 gün'"
+                                @click="snoozeTask(task)"
+                                :disabled="snoozingById[task.id]"
+                            >
+                                ⏰
+                            </button>
                             <button class="btn-icon btn-delete" @click="confirmDelete(task)">🗑</button>
                         </div>
                     </div>
