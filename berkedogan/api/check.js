@@ -29,7 +29,7 @@ function createSession() {
 
   const sessionId = randomUUID();
   const expiresAt = Date.now() + SESSION_EXPIRY_MS;
-  
+
   sessions.set(sessionId, {
     createdAt: Date.now(),
     expiresAt,
@@ -57,10 +57,10 @@ export default function handler(req, res) {
     return res.status(405).json({ success: false });
   }
 
-  const origin = req.headers?.origin;
-  const isLocalDevOrigin =
-    origin === "http://localhost:5173" || origin === "http://127.0.0.1:5173";
-  const cookieSameSite = isLocalDevOrigin ? "none" : "lax";
+  const origin = String(req.headers?.origin || "");
+  const isDevHttpOrigin = origin.startsWith("http://") || origin.startsWith("https://");
+  const cookieSecure = !origin.startsWith("http://");
+  const cookieSameSite = isDevHttpOrigin ? "lax" : "lax";
 
   const { password } = req.body;
   const storedHash = process.env.VERCEL_PASSWORD_HASH;
@@ -86,14 +86,14 @@ export default function handler(req, res) {
   res.setHeader('Set-Cookie', [
     serialize('sessionId', sessionId, {
       httpOnly: true,
-      secure: true,
+      secure: cookieSecure,
       sameSite: cookieSameSite,
       maxAge: SESSION_EXPIRY_MS / 1000,
       path: '/'
     }),
     serialize('authToken', token, {
       httpOnly: true,
-      secure: true,
+      secure: cookieSecure,
       sameSite: cookieSameSite,
       maxAge: SESSION_EXPIRY_MS / 1000,
       path: '/'

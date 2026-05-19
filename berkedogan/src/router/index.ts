@@ -98,14 +98,9 @@ const router = createRouter({
 // Navigation guard for protected routes
 router.beforeEach(async (to, from, next) => {
   if (to.meta.requiresAuth) {
-    // Dev/localhost bypass: allow access during local development without auth
-    // This only triggers when running a dev build and accessing via localhost.
-    const isDevBuild = import.meta.env.DEV === true;
-    const host = window.location.hostname;
-    const isLocalHost = host === 'localhost' || host === '127.0.0.1' || host === '::1';
-
-    if (isDevBuild && isLocalHost) {
-      console.log(`[Router] Dev/localhost detected, bypassing auth for ${to.path}`);
+    // Dev bypass: allow access during Vite development regardless of host/IP.
+    if (import.meta.env.DEV) {
+      console.log(`[Router] Dev mode detected, bypassing auth for ${to.path}`);
       next();
       return;
     }
