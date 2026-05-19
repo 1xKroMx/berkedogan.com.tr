@@ -340,6 +340,43 @@ export default async function handler(req, res) {
       return res.json({ success: true });
     }
 
+    // Dev helper: allow sending arbitrary payload to all active subscriptions
+    // Guard: only allowed when ALLOW_PUSH_BYPASS=true OR NODE_ENV !== 'production'
+    if (req.method === "POST" && action === "trigger-payload") {
+      const allowBypass = process.env.ALLOW_PUSH_BYPASS === 'true' || process.env.NODE_ENV !== 'production';
+      if (!allowBypass) return res.status(403).json({ success: false, error: 'Bypass not allowed' });
+
+      requireVapidEnv();
+      const payload = req.body?.payload || { title: 'Test', body: 'Test bildirim' };
+
+      const sql = getSql();
+      const subs = await sql`
+        SELECT id, subscription
+        FROM push_subscriptions
+        WHERE "isActive" = true
+      `;
+
+      if (!subs || subs.length === 0) return res.json({ success: true, warning: 'No subscriptions' });
+
+      await Promise.all(
+        subs.map(async (s) => {
+          try {
+            await webpush.sendNotification(s.subscription, JSON.stringify(payload));
+          } catch (err) {
+            if (err?.statusCode === 410 || err?.statusCode === 404) {
+              await sql`
+                UPDATE push_subscriptions
+                SET "isActive" = false, "updatedAt" = NOW()
+                WHERE id = ${s.id}
+              `;
+            }
+          }
+        })
+      );
+
+      return res.json({ success: true, sent: subs.length });
+    }
+
     return res.status(405).json({ success: false, error: "Method not allowed" });
   } catch (err) {
     logDbError(err);
