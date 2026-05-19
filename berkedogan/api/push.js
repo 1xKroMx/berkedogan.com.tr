@@ -4,7 +4,7 @@ import webpush from "web-push";
 
 import { getSql, logDbError } from "../lib/db.js";
 import { setCors } from "../lib/cors.js";
-import { scheduleTaskNotification } from "../lib/qstash.js";
+import { scheduleTaskNotification, cancelTaskNotification } from "../lib/qstash.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "default-dev-secret";
 const ISTANBUL_TZ = "Europe/Istanbul";
@@ -55,9 +55,9 @@ export default async function handler(req, res) {
 
   const action = req.query?.action;
 
-  // Cron jobs (checking notifications) don't have cookies, so we bypass auth for them.
-  // In a real env, verify CRON_SECRET header if needed.
-  if (action !== "notify" && action !== "trigger-task") {
+  // Cron jobs (checking notifications) and push-triggered actions don't have cookies, so we bypass auth for them.
+  // In a real env, verify CRON_SECRET or use signed requests if needed.
+  if (action !== "notify" && action !== "trigger-task" && action !== "snooze") {
     if (!verifyAuth(req, res)) return;
   }
 
@@ -65,15 +65,15 @@ export default async function handler(req, res) {
     if (req.method === "POST" && action === "trigger-task") {
         requireVapidEnv();
         const { taskId } = req.body;
-        
+
         if (!taskId) return res.status(400).json({success: false, error: "Missing taskId"});
-        
+
         const sql = getSql();
-        
+
         // Fetch task
         const tasks = await sql`SELECT * FROM tasks WHERE id = ${taskId}`;
         if (tasks.length === 0) return res.json({success: true, skipped: "Task not found"});
-        
+
         const task = tasks[0];
         if (task.completed || !task.notifyEnabled) return res.json({success: true, skipped: "Task completed or disabled"});
 
@@ -88,7 +88,7 @@ export default async function handler(req, res) {
             }
           }
         }
-        
+
         // Fetch subscriptions
         const subs = await sql`
           SELECT id, subscription
@@ -102,7 +102,8 @@ export default async function handler(req, res) {
           title: task.title,
           body: "Hatırlatma zamanı!",
           icon: "/android-chrome-192x192.png",
-          data: { url: "/panel/tasks" },
+          data: { url: "/panel/tasks", taskId: task.id },
+          actions: [{ action: 'snooze-1d', title: 'Ertele 1 gün' }]
         });
 
         // Send
@@ -117,7 +118,7 @@ export default async function handler(req, res) {
             }
           })
         );
-        
+
         // Important: Should we reschedule for tomorrow if it's recurring?
         // No, `scheduleTaskNotification` only sets "next occurrence".
         // The message is consumed now.
@@ -174,7 +175,8 @@ export default async function handler(req, res) {
           title: t.title,
           body: "Hatırlatma zamanı!",
           icon: "/android-chrome-192x192.png",
-          data: { url: "/panel/tasks" },
+          data: { url: "/panel/tasks", taskId: t.id },
+          actions: [{ action: 'snooze-1d', title: 'Ertele 1 gün' }]
         });
 
         await Promise.all(
@@ -201,6 +203,60 @@ export default async function handler(req, res) {
     if (req.method === "GET" && action === "key") {
       const env = requireVapidEnv();
       return res.json({ success: true, key: env.publicKey });
+    }
+
+    if (req.method === "POST" && action === "snooze") {
+      const { taskId, days } = req.body || {};
+      if (!taskId) return res.status(400).json({ success: false, error: "Missing taskId" });
+
+      const addDays = Number(days) || 1;
+      const sql = getSql();
+      const rows = await sql`SELECT * FROM tasks WHERE id = ${taskId}`;
+      if (rows.length === 0) return res.status(404).json({ success: false, error: "Task not found" });
+      const task = rows[0];
+
+      // Calculate new deadline
+      let newDeadline;
+      if (task.deadline) {
+        const d = new Date(task.deadline);
+        d.setDate(d.getDate() + addDays);
+        newDeadline = d.toISOString();
+      } else {
+        const d = new Date();
+        d.setDate(d.getDate() + addDays);
+        newDeadline = d.toISOString();
+      }
+
+      const updatedRows = await sql`
+        UPDATE tasks
+        SET deadline = ${newDeadline}
+        WHERE id = ${taskId}
+        RETURNING id, title, deadline, "notifyEnabled", "notifyTime", "qstashMessageId"
+      `;
+
+      const updated = updatedRows[0];
+
+      // Cancel any existing scheduled message and clear id
+      if (updated?.qstashMessageId) {
+        try {
+          await cancelTaskNotification(updated.qstashMessageId);
+          await sql`UPDATE tasks SET "qstashMessageId" = NULL WHERE id = ${updated.id}`;
+          updated.qstashMessageId = null;
+        } catch (e) {
+          console.error('Snooze cancel error', e);
+        }
+      }
+
+      // Reschedule if notifications enabled
+      if (updated?.notifyEnabled && updated?.notifyTime) {
+        try {
+          await scheduleTaskNotification(updated);
+        } catch (e) {
+          console.error('Snooze schedule error', e);
+        }
+      }
+
+      return res.json({ success: true, task: updated });
     }
 
     if (req.method === "POST" && action === "subscribe") {
