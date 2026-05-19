@@ -69,18 +69,18 @@ const mixRgb = (a: Rgb, b: Rgb, t: number): Rgb => {
 
 const getDeadlineMs = (task: Task) => {
     if (!task.deadline) return null
-    
+
     // If notify is enabled and time is set, use that time as the actual deadline for visual effects
     if (task.notifyEnabled && task.notifyTime) {
         const deadlineDate = new Date(task.deadline)
         const [hours, minutes] = task.notifyTime.split(':').map(Number)
-        
+
         // Set the time to the notify time
         deadlineDate.setHours(hours, minutes, 0, 0)
         const ms = deadlineDate.getTime()
         return Number.isFinite(ms) ? ms : null
     }
-    
+
     const ms = new Date(task.deadline).getTime()
     return Number.isFinite(ms) ? ms : null
 }
@@ -188,6 +188,8 @@ const newTaskDeadlineDate = ref<string>('') // For date picker
 
 const newTaskNotifyEnabled = ref(false)
 const newTaskNotifyTime = ref<string>('09:00')
+const isSendingTestNotification = ref(false)
+const isLocalHost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)
 
 const NOTIFY_OFF_SVG = `<svg xmlns="http://www.w3.org/2000/svg" height="48px" viewBox="0 -960 960 960" width="48px" fill="#666666"><path d="M160-200v-60h80v-304q0-84 49.5-150.5T420-798v-22q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v22q81 17 130.5 83.5T720-564v304h80v60H160Zm320-302Zm0 422q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM300-260h360v-304q0-75-52.5-127.5T480-744q-75 0-127.5 52.5T300-564v304Z"/></svg>`
 const NOTIFY_ON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" height="48px" viewBox="0 -960 960 960" width="48px" fill="#666666"><path d="M120-566q0-90 40-165t107-125l36 48q-56 42-89.5 104.5T180-566h-60Zm660 0q0-75-33.5-137.5T657-808l36-48q67 50 107 125t40 165h-60ZM160-200v-60h80v-304q0-84 49.5-150.5T420-798v-22q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v22q81 17 130.5 83.5T720-564v304h80v60H160Zm320-302Zm0 422q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM300-260h360v-304q0-75-52.5-127.5T480-744q-75 0-127.5 52.5T300-564v304Z"/></svg>`
@@ -234,7 +236,40 @@ const ensurePushSubscription = async () => {
         body: JSON.stringify({ subscription: sub }),
     })
 
-    return reg
+    return { reg, sub }
+}
+
+const getOrCreatePushSubscription = async () => {
+    if (!('serviceWorker' in navigator)) {
+        throw new Error('Service Worker desteklenmiyor')
+    }
+
+    const reg = await navigator.serviceWorker.register('/sw.js')
+    const ready = await navigator.serviceWorker.ready
+    const existing = await ready.pushManager.getSubscription()
+    if (existing) return existing
+
+    const keyRes = await fetch('/api/push/key', {
+        credentials: 'include',
+    })
+    const keyData = await keyRes.json()
+    if (!keyData?.success || !keyData?.key) {
+        throw new Error('VAPID public key alınamadı')
+    }
+
+    const subscription = await ready.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(keyData.key),
+    })
+
+    await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ subscription }),
+    })
+
+    return subscription
 }
 
 const toggleNewTaskNotifications = async () => {
@@ -263,6 +298,58 @@ const toggleNewTaskNotifications = async () => {
         console.error('Push subscription error', e)
         alert('Bildirim kurulumu başarısız oldu.')
         newTaskNotifyEnabled.value = false
+    }
+}
+
+const sendTestNotification = async () => {
+    if (!isLocalHost) {
+        return
+    }
+
+    if (isSendingTestNotification.value) return
+
+    if (!('Notification' in window)) {
+        alert('Tarayıcı bildirimleri desteklemiyor.')
+        return
+    }
+
+    if (Notification.permission !== 'granted') {
+        const permission = await Notification.requestPermission()
+        if (permission !== 'granted') {
+          alert('Bildirim izni verilmedi. Test bildirimi gönderilemiyor.')
+          return
+        }
+    }
+
+    isSendingTestNotification.value = true
+    try {
+        const subscription = await getOrCreatePushSubscription()
+        const res = await fetch('/api/push?action=test-send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                subscription,
+                payload: {
+                    title: 'Deneme',
+                    body: 'Bu bir test bildirimidir',
+                    data: { url: '/panel/tasks' },
+                    actions: [{ action: 'snooze-1d', title: 'Ertele 1 gün' }],
+                },
+            }),
+        })
+
+        const data = await res.json()
+        if (!res.ok || !data.success) {
+            throw new Error(data?.error || 'Test bildirimi gönderilemedi')
+        }
+
+        alert('Test bildirimi gönderildi.')
+    } catch (error) {
+        console.error('Test notification error', error)
+        alert('Test bildirimi gönderilemedi.')
+    } finally {
+        isSendingTestNotification.value = false
     }
 }
 
@@ -372,12 +459,12 @@ const openAddModal = () => {
     newTaskIsRecurring.value = false
     newTaskNotifyEnabled.value = false
     newTaskNotifyTime.value = '09:00'
-    
+
     // Set default date to tomorrow for date picker usage
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
     newTaskDeadlineDate.value = tomorrow.toISOString().split('T')[0]
-    
+
     showAddModal.value = true
 }
 
@@ -395,12 +482,12 @@ const addTask = async () => {
          alert("Please enter a title.")
          return
     }
-    
+
     if (newTaskIsRecurring.value && (!newTaskInterval.value || newTaskInterval.value <= 0)) {
         alert("Recurring tasks require a valid interval (days).")
         return
     }
-    
+
     if (!newTaskIsRecurring.value && !newTaskNotifyEnabled.value && (!newTaskInterval.value || newTaskInterval.value <= 0)) {
          alert("Please enter a duration.")
          return
@@ -410,13 +497,13 @@ const addTask = async () => {
         alert('Lütfen bildirim saati seçin.')
         return
     }
-    
+
     try {
         const res = await fetch("/api/tasks/create", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 title: newTaskTitle.value,
                 interval: newTaskInterval.value,
                 isRecurring: newTaskIsRecurring.value,
@@ -471,7 +558,7 @@ const updateTask = async () => {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 id: editingTask.value.id,
                 title: editingTask.value.title,
                 interval: editingTask.value.interval,
@@ -536,27 +623,32 @@ const formatDate = (dateString?: string) => {
     <div class="tasks-view">
         <div class="header">
             <h1>Tasks View</h1>
-            <button class="btn-add" @click="openAddModal">+ Add Task</button>
+            <div class="header-actions">
+                <button v-if="isLocalHost" class="btn-secondary" :disabled="isSendingTestNotification" @click="sendTestNotification">
+                    {{ isSendingTestNotification ? 'Sending...' : 'Test Bildirimi' }}
+                </button>
+                <button class="btn-add" @click="openAddModal">+ Add Task</button>
+            </div>
         </div>
-        
+
         <div class="tasks">
                 <h3>~ Tasks ~</h3>
                 <div v-if="isLoading">Loading...</div>
                                 <TransitionGroup v-else name="task-fade" tag="div" class="tasks-list">
-                    <div 
+                    <div
                         :class="[
                           task.completed ? 'task-completed' : 'task',
                           isHighlightedCompletion(task) ? 'task-completed-highlight' : ''
-                        ]" 
+                        ]"
                         :style="{ opacity: taskOpacity(task) }"
-                        v-for="task in sortedTasks" 
+                        v-for="task in sortedTasks"
                         :key="task.id"
                     >
                         <div class="task-content">
-                            <input 
-                                type="checkbox" 
-                                :checked="task.completed" 
-                                @change="toggleTask(task)" 
+                            <input
+                                type="checkbox"
+                                :checked="task.completed"
+                                @change="toggleTask(task)"
                             />
                             <div class="task-info">
                                 <span :style="overdueTextStyle(task)">{{ task.title }}</span>
@@ -591,7 +683,7 @@ const formatDate = (dateString?: string) => {
                     </button>
                 </div>
                 <input v-model="newTaskTitle" placeholder="Task title" @keyup.enter="addTask" />
-                
+
                 <div class="form-group checkbox-group">
                     <label>
                         <input type="checkbox" v-model="newTaskIsRecurring" />
@@ -646,14 +738,14 @@ const formatDate = (dateString?: string) => {
                     </button>
                 </div>
                 <input v-if="editingTask" v-model="editingTask.title" @keyup.enter="updateTask" />
-                
+
                 <div class="form-group checkbox-group" v-if="editingTask">
                     <label>
                         <input type="checkbox" v-model="editingTask.isRecurring" />
                         Döngüye al (Recurring)
                     </label>
                 </div>
-                
+
                 <!-- Date picker for non-recurring + notify (Edit) -->
                 <div class="form-group" v-if="editingTask && !editingTask.isRecurring && editingTask.notifyEnabled">
                     <label>Tarih:</label>
@@ -774,6 +866,12 @@ const formatDate = (dateString?: string) => {
     align-items: center;
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .btn-add {
     background-color: var(--color-primary);
     color: white;
@@ -781,6 +879,26 @@ const formatDate = (dateString?: string) => {
     padding: 8px 16px;
     border-radius: 4px;
     cursor: pointer;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-text-primary);
+    padding: 8px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: var(--color-text-primary);
+    color: var(--color-background);
+}
+
+.btn-secondary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .task-actions {
@@ -990,7 +1108,7 @@ const formatDate = (dateString?: string) => {
     align-items: center;
     gap: 8px;
     font-size: 0.9rem;
-    margin-top: 15px; 
+    margin-top: 15px;
     margin-bottom: 15px;
 }
 

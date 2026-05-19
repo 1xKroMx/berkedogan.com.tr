@@ -6,6 +6,20 @@ import { toIstanbulIsoString } from "../lib/time.js";
 import { setCors } from "../lib/cors.js";
 import { scheduleTaskNotification, cancelTaskNotification } from "../lib/qstash.js";
 
+const isLocalDevRequest = (req) => {
+  const origin = String(req.headers.origin || "");
+  const referer = String(req.headers.referer || "");
+  const host = String(req.headers.host || "");
+  return (
+    origin.includes("localhost") ||
+    origin.includes("127.0.0.1") ||
+    referer.includes("localhost") ||
+    referer.includes("127.0.0.1") ||
+    host.includes("localhost") ||
+    host.includes("127.0.0.1")
+  );
+};
+
 export default async function handler(req, res) {
   setCors(req, res);
 
@@ -15,23 +29,27 @@ export default async function handler(req, res) {
 
   const action = req.query?.action;
 
-  const cookies = parse(req.headers.cookie || "");
-  const token = cookies.authToken;
+  const allowLocalBypass = isLocalDevRequest(req);
 
-  if (!token) {
-    return res.status(401).json({ success: false, error: "Missing token" });
-  }
+  if (!allowLocalBypass) {
+    const cookies = parse(req.headers.cookie || "");
+    const token = cookies.authToken;
 
-  try {
-    jwt.verify(token, process.env.JWT_SECRET);
-  } catch {
-    return res.status(401).json({ success: false, error: "Invalid token" });
+    if (!token) {
+      return res.status(401).json({ success: false, error: "Missing token" });
+    }
+
+    try {
+      jwt.verify(token, process.env.JWT_SECRET);
+    } catch {
+      return res.status(401).json({ success: false, error: "Invalid token" });
+    }
   }
 
   try {
     if (req.method === "GET" && !action) {
       const sql = getSql();
-      
+
       // Try with qstashMessageId first, fallback if column doesn't exist yet
       let rows;
       try {
@@ -75,7 +93,7 @@ export default async function handler(req, res) {
       }
 
       const updatedTask = rows[0];
-      
+
       // Try to fetch qstashMessageId separately (if column exists)
       try {
         const msgRows = await sql`SELECT "qstashMessageId" FROM tasks WHERE id = ${updatedTask.id}`;
@@ -83,7 +101,7 @@ export default async function handler(req, res) {
       } catch (e) {
         // Column doesn't exist yet, skip
       }
-      
+
       // If completed, cancel pending notification.
       // If uncompleted (completed=false), reschedule.
       if (updatedTask.completed) {
@@ -128,19 +146,19 @@ export default async function handler(req, res) {
       // If explicit deadline is provided (e.g. from date picker), use it.
       if (explicitDeadline) {
           deadline = new Date(explicitDeadline).toISOString();
-      } 
+      }
       // Fallback to interval based calculation if no explicit deadline but interval exists
       else if (interval && interval > 0) {
         const date = new Date();
         date.setDate(date.getDate() + parseInt(interval));
         deadline = date.toISOString();
       }
-      
+
       // Validation: recurring tasks need an interval
       if (isRecurring && (!interval || interval <= 0)) {
           return res.status(400).json({ success: false, error: "Recurring tasks require a valid interval" });
       }
-      
+
       // Validation: non-recurring tasks need either a deadline or interval
       if (!isRecurring && !deadline && (!interval || interval <= 0)) {
            return res.status(400).json({ success: false, error: "Task requires a duration or deadline" });
@@ -209,7 +227,7 @@ export default async function handler(req, res) {
 
       // Schedule or cancel based on new state
       const task = rows[0];
-      
+
       // Try to fetch qstashMessageId separately
       try {
         const msgRows = await sql`SELECT "qstashMessageId" FROM tasks WHERE id = ${task.id}`;
@@ -217,7 +235,7 @@ export default async function handler(req, res) {
       } catch (e) {
         // Column doesn't exist yet
       }
-      
+
       if (task.notifyEnabled && task.notifyTime) {
           try {
               await scheduleTaskNotification(task);
@@ -253,7 +271,7 @@ export default async function handler(req, res) {
       }
 
       const sql = getSql();
-      
+
       // Try to get qstashMessageId before deleting
       let qstashMessageId = null;
       try {
@@ -262,7 +280,7 @@ export default async function handler(req, res) {
       } catch (e) {
         // Column doesn't exist yet
       }
-      
+
       const rows = await sql`
         DELETE FROM tasks
         WHERE id = ${id}

@@ -3,10 +3,15 @@ import './assets/main.css'
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
-import { inject } from '@vercel/analytics'
 
-// Initialize Vercel Web Analytics
-inject()
+// Initialize Vercel Web Analytics only in production to avoid local request blocks.
+if (import.meta.env.PROD) {
+  void import('@vercel/analytics')
+    .then(({ inject }) => inject())
+    .catch((error) => {
+      console.warn('Vercel Analytics skipped:', error)
+    })
+}
 
 const app = createApp(App)
 

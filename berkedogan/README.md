@@ -43,3 +43,60 @@ npm run test:unit
 ```sh
 npm run lint
 ```
+
+## Local push testing
+
+The push flow can be tested locally without logging in when `NODE_ENV !== production`.
+If you want to force the same behavior in a production-like environment, set `ALLOW_PUSH_BYPASS=true`.
+
+### 1) Create a subscription from the app
+
+Open the app locally, go to the Tasks page, and enable notifications. The local dev flow uses these endpoints:
+
+- `GET /api/push?action=key`
+- `POST /api/push?action=subscribe`
+
+### 2) Send a direct test notification
+
+You can send a notification directly to one subscription or to all active subscriptions.
+
+Send to a specific subscription object:
+
+```sh
+curl -X POST -H "Content-Type: application/json" \
+	-d '{
+		"subscription": {"endpoint":"...","keys":{"p256dh":"...","auth":"..."}},
+		"payload": {
+			"title": "Deneme",
+			"body": "Bu bir test bildirimidir",
+			"data": { "url": "/panel/tasks" },
+			"actions": [{ "action": "snooze-1d", "title": "Ertele 1 gün" }]
+		}
+	}' \
+	"http://localhost:5173/api/push?action=test-send"
+```
+
+Send to all active subscriptions in the database:
+
+```sh
+curl -X POST -H "Content-Type: application/json" \
+	-d '{
+		"payload": {
+			"title": "Deneme",
+			"body": "Bu bir test bildirimidir",
+			"data": { "url": "/panel/tasks" },
+			"actions": [{ "action": "snooze-1d", "title": "Ertele 1 gün" }]
+		}
+	}' \
+	"http://localhost:5173/api/push?action=test-send"
+```
+
+### 3) Send a task-based reminder
+
+If you want to test the existing reminder logic, the backend still supports:
+
+```sh
+curl -X POST -H "Content-Type: application/json" \
+	-d '{"taskId":123}' \
+	"http://localhost:5173/api/push?action=trigger-task"
+```

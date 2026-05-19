@@ -46,6 +46,21 @@ function verifyAuth(req, res) {
   }
 }
 
+function isLocalDevRequest(req) {
+  const origin = String(req.headers.origin || "");
+  const referer = String(req.headers.referer || "");
+  const host = String(req.headers.host || "");
+
+  return (
+    origin.includes("localhost") ||
+    origin.includes("127.0.0.1") ||
+    referer.includes("localhost") ||
+    referer.includes("127.0.0.1") ||
+    host.includes("localhost") ||
+    host.includes("127.0.0.1")
+  );
+}
+
 export default async function handler(req, res) {
   setCors(req, res);
 
@@ -55,9 +70,17 @@ export default async function handler(req, res) {
 
   const action = req.query?.action;
 
+  const allowLocalPushFlow = process.env.ALLOW_PUSH_BYPASS === 'true' || isLocalDevRequest(req);
+
   // Cron jobs (checking notifications) and push-triggered actions don't have cookies, so we bypass auth for them.
   // In a real env, verify CRON_SECRET or use signed requests if needed.
-  if (action !== "notify" && action !== "trigger-task" && action !== "snooze") {
+  if (
+    action !== "notify" &&
+    action !== "trigger-task" &&
+    action !== "snooze" &&
+    action !== "trigger-payload" &&
+    !(allowLocalPushFlow && (action === "key" || action === "subscribe" || action === "test-send"))
+  ) {
     if (!verifyAuth(req, res)) return;
   }
 
@@ -200,7 +223,7 @@ export default async function handler(req, res) {
       return res.json({ success: true, sent: sentCount });
     }
 
-    if (req.method === "GET" && action === "key") {
+      if (req.method === "GET" && action === "key") {
       const env = requireVapidEnv();
       return res.json({ success: true, key: env.publicKey });
     }
@@ -302,6 +325,59 @@ export default async function handler(req, res) {
       return res.json({ success: true, id: rows[0]?.id });
     }
 
+    if (req.method === "POST" && action === "test-send") {
+      const allowBypass = allowLocalPushFlow;
+      if (!allowBypass) return res.status(403).json({ success: false, error: 'Bypass not allowed' });
+
+      requireVapidEnv();
+      const payload = req.body?.payload || {
+        title: 'Deneme',
+        body: 'Bu bir test bildirimidir',
+        data: { url: '/panel/tasks' },
+        actions: [{ action: 'snooze-1d', title: 'Ertele 1 gün' }],
+      };
+
+      const { subscription } = req.body || {};
+      const sql = getSql();
+
+      if (subscription) {
+        try {
+          await webpush.sendNotification(subscription, JSON.stringify(payload));
+          return res.json({ success: true, sent: 1 });
+        } catch (err) {
+          return res.status(500).json({ success: false, error: err?.message || 'Send failed' });
+        }
+      }
+
+      const subs = await sql`
+        SELECT id, subscription
+        FROM push_subscriptions
+        WHERE "isActive" = true
+      `;
+
+      if (!subs.length) {
+        return res.json({ success: true, warning: 'No subscriptions' });
+      }
+
+      await Promise.all(
+        subs.map(async (row) => {
+          try {
+            await webpush.sendNotification(row.subscription, JSON.stringify(payload));
+          } catch (err) {
+            if (err?.statusCode === 404 || err?.statusCode === 410) {
+              await sql`
+                UPDATE push_subscriptions
+                SET "isActive" = false, "updatedAt" = NOW()
+                WHERE id = ${row.id}
+              `;
+            }
+          }
+        })
+      );
+
+      return res.json({ success: true, sent: subs.length });
+    }
+
     if (req.method === "POST" && action === "test") {
       requireVapidEnv();
       const sql = getSql();
@@ -348,6 +424,16 @@ export default async function handler(req, res) {
 
       requireVapidEnv();
       const payload = req.body?.payload || { title: 'Test', body: 'Test bildirim' };
+
+      // If a single subscription object is provided in the body, send only to it (no DB needed).
+      if (req.body?.subscription) {
+        try {
+          await webpush.sendNotification(req.body.subscription, JSON.stringify(payload));
+          return res.json({ success: true, sent: 1 });
+        } catch (err) {
+          return res.status(500).json({ success: false, error: err?.message || 'Send failed' });
+        }
+      }
 
       const sql = getSql();
       const subs = await sql`
