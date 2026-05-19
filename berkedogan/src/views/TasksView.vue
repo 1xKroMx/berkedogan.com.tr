@@ -350,7 +350,7 @@ const sendTestNotification = async () => {
                     title: 'Deneme',
                     body: 'Bu bir test bildirimidir',
                     data: { url: '/panel/tasks' },
-                    actions: [{ action: 'snooze-1d', title: 'Ertele 1 gün' }],
+                    actions: [{ action: 'snooze-1d', title: 'Bir gün ertele' }],
                 },
             }),
         })

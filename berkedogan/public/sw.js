@@ -14,12 +14,23 @@ self.addEventListener('push', (event) => {
     payload = { title: 'Hatırlatma', body: event.data?.text?.() };
   }
 
+  // Debug: log payload and notify clients so the page can inspect received data
+  try {
+    console.log('[sw] push payload', payload);
+    self.clients.matchAll().then((clients) => {
+      clients.forEach((c) => {
+        try { c.postMessage({ type: 'push-payload', payload }); } catch (e) {}
+      });
+    });
+  } catch (e) {}
+
   const title = payload.title || 'Hatırlatma';
   const options = {
     body: payload.body || '',
     icon: payload.icon || '/favicon.ico',
     badge: payload.badge || '/favicon.ico',
     data: payload.data || {},
+    actions: payload.actions || [],
   };
 
   event.waitUntil(self.registration.showNotification(title, options));

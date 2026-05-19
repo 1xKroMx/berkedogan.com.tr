@@ -126,7 +126,7 @@ export default async function handler(req, res) {
           body: "Hatırlatma zamanı!",
           icon: "/android-chrome-192x192.png",
           data: { url: "/panel/tasks", taskId: task.id },
-          actions: [{ action: 'snooze-1d', title: 'Ertele 1 gün' }]
+          actions: [{ action: 'snooze-1d', title: 'Bir gün ertele' }]
         });
 
         // Send
@@ -199,7 +199,7 @@ export default async function handler(req, res) {
           body: "Hatırlatma zamanı!",
           icon: "/android-chrome-192x192.png",
           data: { url: "/panel/tasks", taskId: t.id },
-          actions: [{ action: 'snooze-1d', title: 'Ertele 1 gün' }]
+          actions: [{ action: 'snooze-1d', title: 'Bir gün ertele' }]
         });
 
         await Promise.all(
@@ -334,7 +334,7 @@ export default async function handler(req, res) {
         title: 'Deneme',
         body: 'Bu bir test bildirimidir',
         data: { url: '/panel/tasks' },
-        actions: [{ action: 'snooze-1d', title: 'Ertele 1 gün' }],
+        actions: [{ action: 'snooze-1d', title: 'Bir gün ertele' }],
       };
 
       const { subscription } = req.body || {};

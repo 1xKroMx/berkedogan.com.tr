@@ -73,7 +73,7 @@ curl -X POST -H "Content-Type: application/json" \
 			"title": "Deneme",
 			"body": "Bu bir test bildirimidir",
 			"data": { "url": "/panel/tasks" },
-			"actions": [{ "action": "snooze-1d", "title": "Ertele 1 gün" }]
+			"actions": [{ "action": "snooze-1d", "title": "Bir gün ertele" }]
 		}
 	}' \
 	"http://localhost:5173/api/push?action=test-send"
@@ -88,7 +88,7 @@ curl -X POST -H "Content-Type: application/json" \
 			"title": "Deneme",
 			"body": "Bu bir test bildirimidir",
 			"data": { "url": "/panel/tasks" },
-			"actions": [{ "action": "snooze-1d", "title": "Ertele 1 gün" }]
+			"actions": [{ "action": "snooze-1d", "title": "Bir gün ertele" }]
 		}
 	}' \
 	"http://localhost:5173/api/push?action=test-send"
