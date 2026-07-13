@@ -15,6 +15,7 @@ const projects = computed<Project[]>(() => [
   { id: 1, link: 'https://blog.berkedogan.com.tr', name: t.value.project1Name, description: 'blog.berkedogan.com.tr' },
   { id: 2, link: 'https://gamingis.best', name: 'Gaming is Best', description: 'gamingis.best' },
   { id: 3, link: '/lab', name: t.value.project3Name, description: 'berkedogan.com.tr/lab' },
+  { id: 4, link: 'https://notes.gamingis.best', name: 'Gaming is Best Notes', description: 'notes.gamingis.best' }
 ]);
 </script>
 
