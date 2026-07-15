@@ -22,7 +22,7 @@ const { lang, t } = useLanguage();
             <p class="contact-description">
               {{ t.contactDescription2 }}
             </p>
-            
+
             <div class="contact-details">
               <div class="detail-item">
                 <div class="detail-icon">
@@ -36,7 +36,7 @@ const { lang, t } = useLanguage();
                   <p class="detail-text">{{ t.contactDetail1Text }}</p>
                 </div>
               </div>
-              
+
               <div class="detail-item">
                 <div class="detail-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -46,10 +46,10 @@ const { lang, t } = useLanguage();
                 </div>
                 <div class="detail-content">
                   <h3 class="detail-title">{{ t.contactDetail2 }}</h3>
-                  <p class="detail-text">doganberke95@gmail.com</p>
+                  <p class="detail-text">kromx@berkedogan.com.tr</p>
                 </div>
               </div>
-              
+
               <div class="detail-item">
                 <div class="detail-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -69,8 +69,8 @@ const { lang, t } = useLanguage();
         <section class="contact-methods">
           <h2 class="section-title">{{ t.contactSecTitle}}</h2>
           <div class="contact-grid">
-            <a 
-              href="mailto:doganberke95@gmail.com" 
+            <a
+              href="mailto:kromx@berkedogan.com.tr"
               class="contact-card email-card"
               aria-label="Send me an email"
             >
@@ -83,13 +83,13 @@ const { lang, t } = useLanguage();
               <div class="card-content">
                 <h3 class="card-title">Email</h3>
                 <p class="card-description">{{ t.contactCardEmailDescription }}</p>
-                <span class="card-link">doganberke95@gmail.com</span>
+                <span class="card-link">kromx@berkedogan.com.tr</span>
               </div>
             </a>
 
-            <a 
+            <a
               href="https://www.linkedin.com/in/berkedoğan"
-              target="_blank" 
+              target="_blank"
               rel="noopener noreferrer"
               class="contact-card linkedin-card"
               aria-label="Visit my LinkedIn profile"
@@ -106,9 +106,9 @@ const { lang, t } = useLanguage();
               </div>
             </a>
 
-            <a 
-              href="https://github.com/1xKroMx" 
-              target="_blank" 
+            <a
+              href="https://github.com/1xKroMx"
+              target="_blank"
               rel="noopener noreferrer"
               class="contact-card github-card"
               aria-label="Visit my GitHub profile"
